@@ -32,6 +32,24 @@ jobs:
         working-directory: study-guide-app
         run: npm ci
 
+      - name: Verify canvas sync
+        working-directory: study-guide-app
+        run: |
+          node scripts/sync-canvas.mjs
+          git diff --exit-code src/StudyGuide.tsx || (
+            echo "::error::canvases/study-guide.canvas.tsx and study-guide-app/src/StudyGuide.tsx are out of sync."
+            echo "Run 'cd study-guide-app && node scripts/sync-canvas.mjs' (or '--reverse') and commit the result."
+            exit 1
+          )
+
+      - name: Typecheck
+        working-directory: study-guide-app
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: study-guide-app
+        run: npm test
+
       - name: Build
         working-directory: study-guide-app
         env:

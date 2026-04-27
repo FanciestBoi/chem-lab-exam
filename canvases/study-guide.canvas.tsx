@@ -18,6 +18,14 @@ import {
   useCanvasState,
   useHostTheme,
 } from "cursor/canvas";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 // ============================================================
 // CHEM 105B Lab Final Study Guide
@@ -456,7 +464,7 @@ const experiments: Experiment[] = [
       {
         q: "If t₁/₂ for the dye is 60 s at [bleach]=0.10 M, what is k_obs and what is the rate when A = 0.40?",
         solution:
-          "k_obs = ln 2 / t₁/₂ = 0.693/60 = 0.0116 s⁻¹.\nrate (in absorbance units) = k_obs · A = 0.0116 · 0.40 = 4.6×10⁻³ s⁻¹ in A/s.",
+          "k_obs = ln 2 / t₁/₂ = 0.693/60 = 0.0116 s⁻¹.\nrate (in absorbance units) = k_obs · A = 0.0116 · 0.40 = 4.6×10⁻³ A/s (i.e. d|ΔA|/dt at A = 0.40).",
       },
     ],
   },
@@ -588,7 +596,7 @@ const experiments: Experiment[] = [
       },
       {
         q: "If you double both [Fe³⁺] and [SCN⁻] simultaneously, how does Q change relative to K?",
-        a: "Q goes up by a factor of 4 (since Q = [FeSCN²⁺]/([Fe³⁺][SCN⁻]) — doubling each reactant divides Q by 4). Wait: doubling reactants on the bottom DECREASES Q by 4. Q < K → shifts forward.",
+        a: "Q = [FeSCN²⁺] / ([Fe³⁺][SCN⁻]). Doubling each reactant on the bottom multiplies the denominator by 4 → Q drops to ¼ of its previous value (Q = ¼·K_old). Since Q < K → shifts FORWARD (more red FeSCN²⁺) until Q = K again.",
       },
       {
         q: "Why does adding HCl to the dichromate/chromate equilibrium turn it orange?",
@@ -1152,7 +1160,7 @@ const experiments: Experiment[] = [
       {
         q: "For a triprotic acid with pKa1=2, pKa2=7, pKa3=12, sketch the predicted pH at V_eq1, halfway between V_eq1 and V_eq2, and at V_eq2.",
         solution:
-          "V_eq1: dominant species H₂A⁻ (amphoteric) → pH ≈ (pKa1+pKa2)/2 = 4.5.\nV_eq1+V_eq2)/2: dominant species half H₂A⁻ and half HA²⁻ → pH = pKa2 = 7.0.\nV_eq2: dominant species HA²⁻ → pH ≈ (pKa2+pKa3)/2 = 9.5.",
+          "V_eq1: dominant species H₂A⁻ (amphoteric) → pH ≈ (pKa1+pKa2)/2 = 4.5.\n(V_eq1+V_eq2)/2 (= half-equivalence of step 2): [H₂A⁻] = [HA²⁻] → pH = pKa2 = 7.0.\nV_eq2: dominant species HA²⁻ → pH ≈ (pKa2+pKa3)/2 = 9.5.",
       },
       {
         q: "Your NaOH was 0.105 M instead of the labeled 0.100 M. How does this affect your reported [acid]?",
@@ -1711,7 +1719,7 @@ const experiments: Experiment[] = [
       {
         q: "Rank the metals as sacrificial anodes for iron protection: Mg, Zn, Cu, Pb.",
         solution:
-          "Effective sacrificial anodes have E°_red MORE NEGATIVE than Fe (−0.44 V):\nMg (−2.37 V) > Zn (−0.76 V) > Pb (−0.13 V, marginal — still positive vs Fe so it would NOT protect, in fact it would slightly accelerate corrosion since −0.13 > −0.44 in 'red' convention) > Cu (+0.34 V, would accelerate corrosion).\nAnswer: Mg and Zn protect; Pb and Cu do not.",
+          "Effective sacrificial anodes need E°_red MORE NEGATIVE than Fe (−0.44 V) so they oxidize preferentially:\n• Mg (E° = −2.37 V) — way more negative than Fe → strongly protects.\n• Zn (E° = −0.76 V) — more negative than Fe → protects (this is galvanizing).\n• Pb (E° = −0.13 V) — LESS negative than Fe (−0.13 > −0.44), so Pb is harder to oxidize than Fe → Pb would NOT protect; if anything Fe stays the anode and corrodes.\n• Cu (E° = +0.34 V) — far less negative than Fe → makes Fe the anode → ACCELERATES Fe corrosion.\nProtect: Mg, Zn. Do not protect: Pb, Cu.",
       },
       {
         q: "Explain why an iron pipe carrying salty water that lies near a copper pipe in the soil corrodes much faster than an iron pipe alone.",
@@ -2454,33 +2462,67 @@ function SubsectionView({ s }: { s: Subsection }) {
 function PracticeCard({
   practice,
   storageKey,
+  done,
+  onToggleDone,
 }: {
   practice: Practice;
   storageKey: string;
+  done: boolean;
+  onToggleDone: () => void;
 }) {
   const [open, setOpen] = useCanvasState<boolean>(storageKey, false);
   return (
     <Stack gap={8}>
       <Para text={practice.q} />
-      <Row gap={8}>
+      <Row gap={8} align="center" wrap>
         <Button
           variant={open ? "secondary" : "primary"}
           onClick={() => setOpen((v) => !v)}
         >
           {open ? "Hide solution" : "Show solution"}
         </Button>
+        <Pill
+          tone={done ? "success" : "neutral"}
+          active={done}
+          onClick={onToggleDone}
+        >
+          {done ? "✓ Done" : "Mark done"}
+        </Pill>
       </Row>
-      {open && (
+      <div
+        className="cs-practice-solution"
+        hidden={!open}
+        style={open ? undefined : { display: "none" }}
+      >
         <Callout tone="success" title="Solution">
           <Para text={practice.solution} />
         </Callout>
-      )}
+      </div>
     </Stack>
   );
 }
 
-function ExperimentView({ exp }: { exp: Experiment }) {
+function ExperimentView({
+  exp,
+  prev,
+  next,
+  onNavigate,
+  practiceDone,
+  onTogglePracticeDone,
+}: {
+  exp: Experiment;
+  prev?: Experiment;
+  next?: Experiment;
+  onNavigate: (id: string) => void;
+  practiceDone: Record<string, boolean>;
+  onTogglePracticeDone: (expId: string, idx: number) => void;
+}) {
   const theme = useHostTheme();
+  const totalPractice = exp.practice.length;
+  const doneCount = exp.practice.reduce(
+    (acc, _p, i) => acc + (practiceDone[`${exp.id}.${i}`] ? 1 : 0),
+    0
+  );
   return (
     <Stack gap={16}>
       <Stack gap={6}>
@@ -2491,8 +2533,16 @@ function ExperimentView({ exp }: { exp: Experiment }) {
           <Text tone="secondary" size="small">
             {exp.short}
           </Text>
+          {totalPractice > 0 && (
+            <Pill
+              tone={doneCount === totalPractice ? "success" : "neutral"}
+              size="sm"
+            >
+              {doneCount}/{totalPractice} practice done
+            </Pill>
+          )}
         </Row>
-        <H1>{exp.title}</H1>
+        <H2>{exp.title}</H2>
         <Text tone="secondary" italic>
           {exp.oneLiner}
         </Text>
@@ -2580,11 +2630,15 @@ function ExperimentView({ exp }: { exp: Experiment }) {
                 ? "↓ LOW"
                 : e.direction === "either"
                 ? "± either"
+                : e.direction === "neutral"
+                ? "info"
                 : "—",
             ])}
             rowTone={exp.errors.map((e) =>
               e.direction === "high" || e.direction === "low"
                 ? ("warning" as const)
+                : e.direction === "neutral"
+                ? ("info" as const)
                 : undefined
             )}
           />
@@ -2621,6 +2675,8 @@ function ExperimentView({ exp }: { exp: Experiment }) {
                 <PracticeCard
                   practice={p}
                   storageKey={`solution.${exp.id}.${i}`}
+                  done={!!practiceDone[`${exp.id}.${i}`]}
+                  onToggleDone={() => onTogglePracticeDone(exp.id, i)}
                 />
                 {i < exp.practice.length - 1 && <Divider />}
               </Stack>
@@ -2628,6 +2684,24 @@ function ExperimentView({ exp }: { exp: Experiment }) {
           </Stack>
         </CardBody>
       </Card>
+
+      <Row gap={10} align="center" justify="between" wrap>
+        <Button
+          variant="secondary"
+          onClick={() => prev && onNavigate(prev.id)}
+        >
+          {prev ? `← Prev: ${prev.num}. ${prev.short}` : "← Prev"}
+        </Button>
+        <Text tone="tertiary" size="small">
+          Experiment {exp.num} of {experiments.length}
+        </Text>
+        <Button
+          variant="secondary"
+          onClick={() => next && onNavigate(next.id)}
+        >
+          {next ? `Next: ${next.num}. ${next.short} →` : "Next →"}
+        </Button>
+      </Row>
     </Stack>
   );
 }
@@ -2640,7 +2714,7 @@ function FormulasPane() {
   return (
     <Stack gap={16}>
       <Stack gap={4}>
-        <H1>Formulas you must know cold</H1>
+        <H2>Formulas you must know cold</H2>
         <Text tone="secondary">
           Skibo expects fluency with these. Don&apos;t look them up during the exam &mdash; have them in working memory.
         </Text>
@@ -2675,7 +2749,7 @@ function TechniquesPane() {
   return (
     <Stack gap={16}>
       <Stack gap={4}>
-        <H1>Lab techniques cheat sheet</H1>
+        <H2>Lab techniques cheat sheet</H2>
         <Text tone="secondary">
           Glassware tolerances, pH-meter calibration, spectrometer protocol, sig-fig and error-propagation rules &mdash; all the procedural facts a 'random question' might fish for.
         </Text>
@@ -2749,7 +2823,7 @@ function SafetyPane() {
   return (
     <Stack gap={14}>
       <Stack gap={4}>
-        <H1>Safety &amp; general lab knowledge</H1>
+        <H2>Safety &amp; general lab knowledge</H2>
         <Text tone="secondary">
           Must-know facts for any pre-lab quiz or lab-knowledge multiple choice question.
         </Text>
@@ -2779,7 +2853,7 @@ function CramPane() {
   return (
     <Stack gap={16}>
       <Stack gap={4}>
-        <H1>Last-48-hours cram plan</H1>
+        <H2>Last-48-hours cram plan</H2>
         <Text tone="secondary">
           A concrete day-by-day plan for the 4 days remaining. Don&apos;t learn new material on day 4; consolidate.
         </Text>
@@ -2832,6 +2906,411 @@ const navItems: NavItem[] = [
   { id: "ref-cram", label: "Cram plan", group: "reference" },
 ];
 
+const validSectionIds = new Set(navItems.map((n) => n.id));
+
+// ------------------------------------------------------------
+// SEARCH INDEX
+// ------------------------------------------------------------
+
+type SearchEntry = {
+  sectionId: string;
+  sectionLabel: string;
+  group: "experiment" | "reference";
+  context: string;
+  text: string;
+};
+
+const searchIndex: SearchEntry[] = (() => {
+  const out: SearchEntry[] = [];
+  for (const exp of experiments) {
+    const meta = {
+      sectionId: exp.id,
+      sectionLabel: `${exp.num}. ${exp.short}`,
+      group: "experiment" as const,
+    };
+    out.push({ ...meta, context: "Title", text: exp.title });
+    out.push({ ...meta, context: "Summary", text: exp.oneLiner });
+    exp.learningObjectives.forEach((b) =>
+      out.push({ ...meta, context: "Learning objective", text: b })
+    );
+    exp.experimentalObjectives.forEach((b) =>
+      out.push({ ...meta, context: "Experimental objective", text: b })
+    );
+    exp.theory.forEach((t) => {
+      const ctx = `Theory · ${t.heading}`;
+      if (t.body) out.push({ ...meta, context: ctx, text: t.body });
+      t.bullets?.forEach((b) => out.push({ ...meta, context: ctx, text: b }));
+      t.equations?.forEach((eq) =>
+        out.push({ ...meta, context: `${ctx} (eq)`, text: eq })
+      );
+    });
+    exp.procedure.forEach((p) =>
+      out.push({ ...meta, context: "Procedure", text: p })
+    );
+    exp.procedureWhy.forEach((p) =>
+      out.push({ ...meta, context: `Procedure · ${p.step}`, text: p.why })
+    );
+    exp.dataAnalysis.forEach((t) => {
+      const ctx = `Analysis · ${t.heading}`;
+      if (t.body) out.push({ ...meta, context: ctx, text: t.body });
+      t.bullets?.forEach((b) => out.push({ ...meta, context: ctx, text: b }));
+      t.equations?.forEach((eq) =>
+        out.push({ ...meta, context: `${ctx} (eq)`, text: eq })
+      );
+    });
+    exp.errors.forEach((e) =>
+      out.push({
+        ...meta,
+        context: "Common error",
+        text: `${e.source}: ${e.effect}`,
+      })
+    );
+    exp.whyQA.forEach((qa, i) => {
+      out.push({ ...meta, context: `Q${i + 1}`, text: qa.q });
+      out.push({ ...meta, context: `Q${i + 1} answer`, text: qa.a });
+    });
+    exp.practice.forEach((p, i) => {
+      out.push({ ...meta, context: `Practice ${i + 1}`, text: p.q });
+      out.push({
+        ...meta,
+        context: `Practice ${i + 1} solution`,
+        text: p.solution,
+      });
+    });
+  }
+
+  const refMeta = (id: string, label: string) => ({
+    sectionId: id,
+    sectionLabel: label,
+    group: "reference" as const,
+  });
+
+  formulaGroups.forEach((g) =>
+    g.items.forEach((it) =>
+      out.push({
+        ...refMeta("ref-formulas", "Formulas"),
+        context: g.heading,
+        text: `${it.name} · ${it.eq}${it.note ? " · " + it.note : ""}`,
+      })
+    )
+  );
+  techniqueRows.forEach((r) =>
+    out.push({
+      ...refMeta("ref-techniques", "Lab techniques"),
+      context: r[0],
+      text: `${r[1]} — ${r[2]}`,
+    })
+  );
+  sigfigsRules.forEach((r) =>
+    out.push({
+      ...refMeta("ref-techniques", "Lab techniques"),
+      context: "Sig figs",
+      text: r,
+    })
+  );
+  errorPropRules.forEach((r) =>
+    out.push({
+      ...refMeta("ref-techniques", "Lab techniques"),
+      context: "Error propagation",
+      text: r,
+    })
+  );
+  safetyRules.forEach((r) =>
+    out.push({
+      ...refMeta("ref-safety", "Safety"),
+      context: "Safety rule",
+      text: r,
+    })
+  );
+  cramPlan.forEach((d) =>
+    d.tasks.forEach((t) =>
+      out.push({
+        ...refMeta("ref-cram", "Cram plan"),
+        context: d.day,
+        text: t,
+      })
+    )
+  );
+  return out;
+})();
+
+function searchEntries(query: string): SearchEntry[] {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
+  const tokens = q.split(/\s+/).filter(Boolean);
+  return searchIndex.filter((e) => {
+    const hay = (e.text + " " + e.context).toLowerCase();
+    return tokens.every((t) => hay.includes(t));
+  });
+}
+
+// ------------------------------------------------------------
+// HOOKS
+// ------------------------------------------------------------
+
+function useHashSection(
+  section: string,
+  setSection: (id: string) => void
+): void {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const fromHash = window.location.hash.replace(/^#\/?/, "");
+    if (fromHash && validSectionIds.has(fromHash) && fromHash !== section) {
+      setSection(fromHash);
+    }
+    const onHashChange = () => {
+      const next = window.location.hash.replace(/^#\/?/, "");
+      if (next && validSectionIds.has(next)) setSection(next);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const desired = "#" + section;
+    if (window.location.hash !== desired) {
+      const url = window.location.pathname + window.location.search + desired;
+      window.history.replaceState(null, "", url);
+    }
+  }, [section]);
+}
+
+type ThemeMode = "auto" | "light" | "dark";
+
+function useThemeMode(): [ThemeMode, () => void] {
+  const [mode, setMode] = useCanvasState<ThemeMode>("theme-mode", "auto");
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    if (mode === "auto") {
+      delete root.dataset.theme;
+    } else {
+      root.dataset.theme = mode;
+    }
+    root.dispatchEvent(new CustomEvent("themechange"));
+  }, [mode]);
+  const cycle = useCallback(() => {
+    setMode((m) => (m === "auto" ? "light" : m === "light" ? "dark" : "auto"));
+  }, [setMode]);
+  return [mode, cycle];
+}
+
+function useGlobalKeyboardShortcuts({
+  prev,
+  next,
+  openSearch,
+}: {
+  prev: () => void;
+  next: () => void;
+  openSearch: () => void;
+}) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isTextInput = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName;
+      return (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        el.isContentEditable
+      );
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        openSearch();
+        return;
+      }
+      if (isTextInput(e.target)) return;
+      if (e.key === "/") {
+        e.preventDefault();
+        openSearch();
+      } else if (e.key === "ArrowLeft" || e.key === "j") {
+        prev();
+      } else if (e.key === "ArrowRight" || e.key === "k") {
+        next();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [prev, next, openSearch]);
+}
+
+// ------------------------------------------------------------
+// SEARCH OVERLAY
+// ------------------------------------------------------------
+
+function highlightMatches(text: string, query: string): ReactNode {
+  const q = query.trim();
+  if (q.length < 2) return text;
+  const parts = q.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return text;
+  const pattern = new RegExp(
+    "(" + parts.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")",
+    "gi"
+  );
+  const segments = text.split(pattern);
+  return segments.map((seg, i) =>
+    pattern.test(seg) ? (
+      <mark key={i} className="cs-search-mark">
+        {seg}
+      </mark>
+    ) : (
+      <span key={i}>{seg}</span>
+    )
+  );
+}
+
+function SearchOverlay({
+  onClose,
+  onNavigate,
+}: {
+  onClose: () => void;
+  onNavigate: (id: string) => void;
+}) {
+  const theme = useHostTheme();
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const grouped = useMemo(() => {
+    const matches = searchEntries(query).slice(0, 80);
+    const groups = new Map<
+      string,
+      { sectionId: string; sectionLabel: string; entries: SearchEntry[] }
+    >();
+    for (const m of matches) {
+      const g = groups.get(m.sectionId);
+      if (g) {
+        if (g.entries.length < 6) g.entries.push(m);
+      } else {
+        groups.set(m.sectionId, {
+          sectionId: m.sectionId,
+          sectionLabel: m.sectionLabel,
+          entries: [m],
+        });
+      }
+    }
+    return Array.from(groups.values()).slice(0, 8);
+  }, [query]);
+
+  const totalMatches = grouped.reduce((a, g) => a + g.entries.length, 0);
+
+  return (
+    <div
+      ref={overlayRef}
+      className="cs-search-overlay"
+      onClick={(e) => {
+        if (e.target === overlayRef.current) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search"
+      style={{ background: "rgba(0,0,0,0.45)" }}
+    >
+      <div
+        className="cs-search-panel"
+        style={{
+          background: theme.fill.primary,
+          color: theme.text.primary,
+          border: `1px solid ${theme.stroke.secondary}`,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+        }}
+      >
+        <div
+          className="cs-search-input-wrap"
+          style={{ borderBottom: `1px solid ${theme.stroke.tertiary}` }}
+        >
+          <span aria-hidden="true" style={{ color: theme.text.tertiary }}>
+            ⌕
+          </span>
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search experiments, formulas, errors, practice…"
+            className="cs-search-input"
+            style={{ color: theme.text.primary }}
+          />
+          <kbd
+            style={{
+              background: theme.fill.tertiary,
+              color: theme.text.tertiary,
+              border: `1px solid ${theme.stroke.tertiary}`,
+            }}
+          >
+            Esc
+          </kbd>
+        </div>
+        <div className="cs-search-results">
+          {query.trim().length < 2 ? (
+            <div className="cs-search-empty" style={{ color: theme.text.tertiary }}>
+              Type at least 2 characters. Use <kbd>↵</kbd> to jump,{" "}
+              <kbd>Esc</kbd> to close.
+            </div>
+          ) : totalMatches === 0 ? (
+            <div className="cs-search-empty" style={{ color: theme.text.tertiary }}>
+              No matches.
+            </div>
+          ) : (
+            grouped.map((g) => (
+              <div key={g.sectionId} className="cs-search-group">
+                <div
+                  className="cs-search-group-label"
+                  style={{ color: theme.text.tertiary }}
+                >
+                  {g.sectionLabel}
+                </div>
+                {g.entries.map((entry, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="cs-search-item"
+                    onClick={() => {
+                      onNavigate(entry.sectionId);
+                      onClose();
+                    }}
+                    style={{ color: theme.text.primary }}
+                  >
+                    <div
+                      className="cs-search-item-context"
+                      style={{ color: theme.text.tertiary }}
+                    >
+                      {entry.context}
+                    </div>
+                    <div className="cs-search-item-text">
+                      {highlightMatches(entry.text, query)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ------------------------------------------------------------
 // ROOT COMPONENT
 // ------------------------------------------------------------
@@ -2843,6 +3322,34 @@ export default function StudyGuide() {
     "reviewed",
     {}
   );
+  const [practiceDone, setPracticeDone] = useCanvasState<
+    Record<string, boolean>
+  >("practice-done", {});
+  const [themeMode, cycleThemeMode] = useThemeMode();
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const navigate = useCallback(
+    (id: string) => {
+      if (!validSectionIds.has(id)) return;
+      setSection(id);
+      if (typeof window !== "undefined") {
+        const url =
+          window.location.pathname + window.location.search + "#" + id;
+        window.history.pushState(null, "", url);
+      }
+    },
+    [setSection]
+  );
+
+  useHashSection(section, setSection);
+
+  const togglePracticeDone = useCallback(
+    (expId: string, idx: number) => {
+      const k = `${expId}.${idx}`;
+      setPracticeDone((p) => ({ ...p, [k]: !p[k] }));
+    },
+    [setPracticeDone]
+  );
 
   const toggleReviewed = (id: string) =>
     setReviewed((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -2851,6 +3358,51 @@ export default function StudyGuide() {
   const reviewedCount = experiments.filter((e) => reviewed[e.id]).length;
 
   const currentExp = experiments.find((e) => e.id === section);
+  const currentIdx = experiments.findIndex((e) => e.id === section);
+  const prevExp =
+    currentIdx > 0 ? experiments[currentIdx - 1] : undefined;
+  const nextExp =
+    currentIdx >= 0 && currentIdx < experiments.length - 1
+      ? experiments[currentIdx + 1]
+      : undefined;
+
+  const goPrev = useCallback(() => {
+    const idx = navItems.findIndex((n) => n.id === section);
+    if (idx > 0) navigate(navItems[idx - 1].id);
+  }, [section, navigate]);
+  const goNext = useCallback(() => {
+    const idx = navItems.findIndex((n) => n.id === section);
+    if (idx >= 0 && idx < navItems.length - 1) navigate(navItems[idx + 1].id);
+  }, [section, navigate]);
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+
+  useGlobalKeyboardShortcuts({
+    prev: goPrev,
+    next: goNext,
+    openSearch,
+  });
+
+  const themeLabel =
+    themeMode === "auto"
+      ? "Theme: Auto"
+      : themeMode === "light"
+      ? "Theme: Light"
+      : "Theme: Dark";
+  const themeIcon =
+    themeMode === "auto" ? "◐" : themeMode === "light" ? "☀" : "☾";
+
+  const [printMode, setPrintMode] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const before = () => setPrintMode(true);
+    const after = () => setPrintMode(false);
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, []);
 
   return (
     <Stack gap={20}>
@@ -2866,8 +3418,8 @@ export default function StudyGuide() {
         <H1>Lab Final Study Guide</H1>
         <Text tone="secondary">
           Comprehensive review of every experiment plus cross-cutting reference. Use the
-          sidebar to jump around. Each experiment has collapsible sections; practice problems
-          have hide / show solutions.
+          sidebar to jump around (or press <Code>⌘K</Code> / <Code>/</Code> to search). Each
+          experiment has collapsible sections; practice problems have hide / show solutions.
         </Text>
       </Stack>
 
@@ -2886,6 +3438,18 @@ export default function StudyGuide() {
 
       <Grid columns="240px 1fr" gap={20} align="start">
         <Stack gap={12}>
+          <Row gap={6} align="center" wrap>
+            <Button variant="secondary" onClick={openSearch}>
+              ⌕ Search…
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={cycleThemeMode}
+              title={themeLabel}
+            >
+              {themeIcon}
+            </Button>
+          </Row>
           <Stack gap={6}>
             <Text weight="semibold" tone="secondary" size="small">
               EXPERIMENTS
@@ -2903,7 +3467,7 @@ export default function StudyGuide() {
                         <Pill
                           active={isActive}
                           tone={isReviewed ? "success" : "neutral"}
-                          onClick={() => setSection(n.id)}
+                          onClick={() => navigate(n.id)}
                           style={{ width: "100%", justifyContent: "flex-start" }}
                         >
                           {n.label}
@@ -2954,7 +3518,7 @@ export default function StudyGuide() {
                   <Pill
                     key={n.id}
                     active={section === n.id}
-                    onClick={() => setSection(n.id)}
+                    onClick={() => navigate(n.id)}
                     style={{ width: "100%", justifyContent: "flex-start" }}
                   >
                     {n.label}
@@ -3001,13 +3565,64 @@ export default function StudyGuide() {
         </Stack>
 
         <div>
-          {currentExp && <ExperimentView exp={currentExp} />}
-          {section === "ref-formulas" && <FormulasPane />}
-          {section === "ref-techniques" && <TechniquesPane />}
-          {section === "ref-safety" && <SafetyPane />}
-          {section === "ref-cram" && <CramPane />}
+          {printMode ? (
+            <>
+              {experiments.map((e, i) => (
+                <div key={e.id} className="cs-print-section">
+                  <ExperimentView
+                    exp={e}
+                    prev={i > 0 ? experiments[i - 1] : undefined}
+                    next={
+                      i < experiments.length - 1
+                        ? experiments[i + 1]
+                        : undefined
+                    }
+                    onNavigate={navigate}
+                    practiceDone={practiceDone}
+                    onTogglePracticeDone={togglePracticeDone}
+                  />
+                </div>
+              ))}
+              <div className="cs-print-section">
+                <FormulasPane />
+              </div>
+              <div className="cs-print-section">
+                <TechniquesPane />
+              </div>
+              <div className="cs-print-section">
+                <SafetyPane />
+              </div>
+              <div className="cs-print-section">
+                <CramPane />
+              </div>
+            </>
+          ) : (
+            <>
+              {currentExp && (
+                <ExperimentView
+                  exp={currentExp}
+                  prev={prevExp}
+                  next={nextExp}
+                  onNavigate={navigate}
+                  practiceDone={practiceDone}
+                  onTogglePracticeDone={togglePracticeDone}
+                />
+              )}
+              {section === "ref-formulas" && <FormulasPane />}
+              {section === "ref-techniques" && <TechniquesPane />}
+              {section === "ref-safety" && <SafetyPane />}
+              {section === "ref-cram" && <CramPane />}
+            </>
+          )}
         </div>
       </Grid>
+
+      {searchOpen && (
+        <SearchOverlay
+          onClose={() => setSearchOpen(false)}
+          onNavigate={navigate}
+        />
+      )}
     </Stack>
   );
 }

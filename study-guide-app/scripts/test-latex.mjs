@@ -1,134 +1,167 @@
-// Self-contained test: ports unicodeToLatex from canvas-shim.tsx as plain JS
-// so it can be `node`-run without TS tooling.
-// Run with: node scripts/test-latex.mjs
+/**
+ * Real assertion-based tests for `unicodeToLatex`, importing the function
+ * from the live canvas-shim source instead of the previous duplicate.
+ *
+ * Run with: npm test  (which calls `node --import tsx scripts/test-latex.mjs`).
+ */
 
-const SUBSCRIPT_MAP = {
-  "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
-  "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
-  "₊": "+", "₋": "-", "₌": "=", "₍": "(", "₎": ")",
-  "ₐ": "a", "ₑ": "e", "ₕ": "h", "ᵢ": "i", "ⱼ": "j",
-  "ₖ": "k", "ₗ": "l", "ₘ": "m", "ₙ": "n", "ₒ": "o",
-  "ₚ": "p", "ᵣ": "r", "ₛ": "s", "ₜ": "t", "ᵤ": "u",
-  "ᵥ": "v", "ₓ": "x",
-};
-const SUPERSCRIPT_MAP = {
-  "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
-  "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9",
-  "⁺": "+", "⁻": "-", "⁼": "=", "⁽": "(", "⁾": ")",
-  "ⁿ": "n", "ⁱ": "i",
-};
-const GREEK_MAP = {
-  "α": "\\alpha ", "β": "\\beta ", "γ": "\\gamma ", "δ": "\\delta ",
-  "ε": "\\varepsilon ", "θ": "\\theta ", "λ": "\\lambda ", "μ": "\\mu ",
-  "π": "\\pi ", "ρ": "\\rho ", "σ": "\\sigma ", "τ": "\\tau ",
-  "Δ": "\\Delta ", "Σ": "\\Sigma ", "Π": "\\Pi ", "Λ": "\\Lambda ",
-  "Φ": "\\Phi ", "Ω": "\\Omega ",
-};
-const OPERATOR_MAP = {
-  "→": "\\to ", "⇌": "\\rightleftharpoons ", "≈": "\\approx ",
-  "≤": "\\leq ", "≥": "\\geq ", "±": "\\pm ", "×": "\\times ",
-  "·": "\\cdot ", "°": "^{\\circ}", "−": "-", "⁻": "-",
-};
-function mergeRunsToLatex(s) {
-  let out = ""; let i = 0;
-  while (i < s.length) {
-    const ch = s[i];
-    if (SUBSCRIPT_MAP[ch]) {
-      let run = "";
-      while (i < s.length && SUBSCRIPT_MAP[s[i]]) { run += SUBSCRIPT_MAP[s[i]]; i++; }
-      out += run.length === 1 ? `_${run}` : `_{${run}}`;
-      continue;
+import assert from "node:assert/strict";
+import { unicodeToLatex } from "../src/latex.ts";
+
+let passed = 0;
+let failed = 0;
+
+function check(label, actual, expected) {
+  try {
+    if (typeof expected === "function") {
+      expected(actual);
+    } else {
+      assert.equal(actual, expected);
     }
-    if (SUPERSCRIPT_MAP[ch]) {
-      let run = "";
-      while (i < s.length && SUPERSCRIPT_MAP[s[i]]) { run += SUPERSCRIPT_MAP[s[i]]; i++; }
-      out += run.length === 1 ? `^${run}` : `^{${run}}`;
-      continue;
+    passed++;
+  } catch (e) {
+    failed++;
+    console.error(`✗ ${label}`);
+    console.error(`  actual:   ${JSON.stringify(actual)}`);
+    if (typeof expected !== "function") {
+      console.error(`  expected: ${JSON.stringify(expected)}`);
     }
-    out += ch; i++;
+    console.error(`  ${e.message}`);
   }
-  return out;
-}
-function styleChemBrackets(s) {
-  return s.replace(/\[([^\]\[]*)\]/g, (_, inner) =>
-    /[\\=<>~]/.test(inner) ? `[${inner}]` : `[\\mathrm{${inner}}]`
-  );
-}
-function replaceMap(s, map) {
-  let out = "";
-  for (const ch of s) out += map[ch] ?? ch;
-  return out;
-}
-function styleKVariants(s) {
-  return s.replace(/\bK(sp|eq|a|b|w|c|p|f)\b/g, (_, sub) => `K_{\\mathrm{${sub}}}`);
-}
-function wrapMultiLetterSubscripts(s) {
-  return s.replace(
-    /_([a-zA-Z][a-zA-Z0-9]+(?:_[a-zA-Z][a-zA-Z0-9]+)*)/g,
-    (_, w) => `_{\\mathrm{${w.replace(/_/g, ",\\,")}}}`
-  );
-}
-function wrapBareChemistry(s) {
-  const stash = [];
-  s = s.replace(/\{[^{}]*\}/g, (m) => { const i = stash.length; stash.push(m); return `\u0001${i}\u0002`; });
-  s = s.replace(/(?<![\\a-zA-Z])(?:[A-Z][a-z]?\d*){2,}(?![a-z])/g, (m) => `\\mathrm{${m}}`);
-  s = s.replace(/\u0001(\d+)\u0002/g, (_, i) => stash[+i]);
-  return s;
-}
-function wrapMultiLetterSuperscripts(s) {
-  return s.replace(/\^([a-zA-Z]{2,})\b/g, (_, w) => `^{\\mathrm{${w}}}`);
-}
-const MATH_FUNCS = ["ln","log","exp","sin","cos","tan","sec","csc","cot","sinh","cosh","tanh","arcsin","arccos","arctan","lim","min","max","sup","inf","det"];
-function wrapMathFunctions(s) {
-  for (const fn of MATH_FUNCS) {
-    const re = new RegExp(`(?<![\\\\a-zA-Z0-9])${fn}(?![a-zA-Z0-9])`, "g");
-    s = s.replace(re, `\\${fn}`);
-  }
-  return s;
-}
-function wrapEnglishWords(s) {
-  const stash = [];
-  s = s.replace(/\{[^{}]*\}/g, (m) => { const i = stash.length; stash.push(m); return `\u0001${i}\u0002`; });
-  const wordTok = `[A-Za-z][a-z]+(?:'[a-z]+)?`;
-  const lowerStartTok = `[a-z]{3,}(?:'[a-z]+)?`;
-  const multiWord = `(?:[a-z]{2,}(?:'[a-z]+)?|[A-Z][a-z]{2,}(?:'[a-z]+)?)(?:[ \\t]+${wordTok})+`;
-  const singleWord = `(?:${lowerStartTok}|[A-Z][a-z]{3,}(?:'[a-z]+)?)`;
-  const combined = `(?:${multiWord}|${singleWord})`;
-  const re = new RegExp(`(?<![\\\\a-zA-Z])${combined}`, "g");
-  s = s.replace(re, (m) => `\\text{${m}}`);
-  s = s.replace(/\u0001(\d+)\u0002/g, (_, i) => stash[+i]);
-  return s;
-}
-function unicodeToLatex(input) {
-  if (!input) return "";
-  let s = input;
-  s = mergeRunsToLatex(s);
-  s = replaceMap(s, GREEK_MAP);
-  s = replaceMap(s, OPERATOR_MAP);
-  s = wrapMultiLetterSubscripts(s);
-  s = wrapMultiLetterSuperscripts(s);
-  s = wrapMathFunctions(s);
-  s = wrapBareChemistry(s);
-  s = wrapEnglishWords(s);
-  s = styleChemBrackets(s);
-  s = styleKVariants(s);
-  return s;
 }
 
-const cases = [
-  "ΔG° = −RT ln K",
-  "ΔG° = ΔH° − T ΔS°",
-  "ln K = −ΔH°/(R·T) + ΔS°/R   (van't Hoff)",
-  "moles acid = (M_NaOH)(V_eq) for monoprotic",
-  "moles HOAc = (M_NaOH)(V_eq); [HOAc]₀ = moles / V_acid_initial",
-  "rate₂ / rate₁ = ([H₂O₂]₂ / [H₂O₂]₁)^m   (with [I⁻] fixed)",
-  "rate₃ / rate₁ = ([I⁻]₃ / [I⁻]₁)^n     (with [H₂O₂] fixed)",
-  "Ksp = [Ca²⁺][OH⁻]²",
-  "K = k_f / k_r",
-  "Q = e^(-Ea/RT)",
-];
-for (const c of cases) {
-  console.log("IN :", c);
-  console.log("OUT:", unicodeToLatex(c));
-  console.log("");
+function contains(...needles) {
+  return (actual) => {
+    for (const n of needles) {
+      assert.ok(
+        actual.includes(n),
+        `expected to find ${JSON.stringify(n)} in ${JSON.stringify(actual)}`
+      );
+    }
+  };
 }
+
+// ---------------------------------------------------------------------------
+// Sanity / no-op cases
+// ---------------------------------------------------------------------------
+check("empty input", unicodeToLatex(""), "");
+check("plain ASCII numbers pass through", unicodeToLatex("42"), "42");
+
+// ---------------------------------------------------------------------------
+// Subscripts and superscripts
+// ---------------------------------------------------------------------------
+check(
+  "subscript single digit",
+  unicodeToLatex("H₂"),
+  contains("_2")
+);
+check(
+  "subscript multi-digit run merges to braces",
+  unicodeToLatex("x₁₀"),
+  contains("_{10}")
+);
+check(
+  "superscript single digit",
+  unicodeToLatex("E²"),
+  contains("^2")
+);
+check(
+  "superscript run merges and signs are preserved",
+  unicodeToLatex("Ca²⁺"),
+  contains("^{2+}")
+);
+check(
+  "negative ion superscript",
+  unicodeToLatex("OH⁻"),
+  contains("^-")
+);
+check(
+  "multi-char superscript with sign uses braces",
+  unicodeToLatex("SO₄²⁻"),
+  contains("^{2-}")
+);
+
+// ---------------------------------------------------------------------------
+// Greek letters
+// ---------------------------------------------------------------------------
+check(
+  "uppercase delta becomes \\Delta",
+  unicodeToLatex("ΔG"),
+  contains("\\Delta")
+);
+check(
+  "lambda becomes \\lambda",
+  unicodeToLatex("λ_max"),
+  contains("\\lambda")
+);
+
+// ---------------------------------------------------------------------------
+// Operators
+// ---------------------------------------------------------------------------
+check(
+  "rightleftharpoons for equilibrium arrow",
+  unicodeToLatex("A ⇌ B"),
+  contains("\\rightleftharpoons")
+);
+check(
+  "ASCII unicode minus is normalized to ascii hyphen",
+  unicodeToLatex("ΔG = −RT"),
+  contains("=", "-")
+);
+check(
+  "degree symbol becomes \\circ",
+  unicodeToLatex("ΔG°"),
+  contains("^{\\circ}")
+);
+
+// ---------------------------------------------------------------------------
+// Chemistry styling
+// ---------------------------------------------------------------------------
+check(
+  "concentration brackets get \\mathrm",
+  unicodeToLatex("[Fe³⁺]"),
+  contains("[\\mathrm{Fe^{3+}}]")
+);
+check(
+  "Ksp gets subscript styling",
+  unicodeToLatex("Ksp = [Ca²⁺][OH⁻]²"),
+  contains("K_{\\mathrm{sp}}")
+);
+check(
+  "bare chemistry formula wraps in \\mathrm",
+  unicodeToLatex("CaCO3"),
+  contains("\\mathrm{CaCO3}")
+);
+
+// ---------------------------------------------------------------------------
+// Math functions
+// ---------------------------------------------------------------------------
+check(
+  "ln gets a backslash",
+  unicodeToLatex("ln K"),
+  contains("\\ln")
+);
+
+// ---------------------------------------------------------------------------
+// Multi-letter subscript wrap
+// ---------------------------------------------------------------------------
+check(
+  "multi-letter underscore subscript wraps in \\mathrm",
+  unicodeToLatex("V_eq"),
+  contains("V_{\\mathrm{eq}}")
+);
+
+// ---------------------------------------------------------------------------
+// Realistic full equations
+// ---------------------------------------------------------------------------
+check(
+  "ΔG° equation roundtrip contains expected pieces",
+  unicodeToLatex("ΔG° = −RT ln K"),
+  contains("\\Delta", "^{\\circ}", "\\ln", "RT")
+);
+
+if (failed > 0) {
+  console.error(`\n${failed} test(s) failed, ${passed} passed.`);
+  process.exit(1);
+}
+console.log(`\nAll ${passed} unicodeToLatex tests passed.`);
