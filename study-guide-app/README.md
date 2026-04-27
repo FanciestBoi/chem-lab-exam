@@ -64,6 +64,40 @@ with one line changed (its import points at `./canvas-shim` instead of
 `cursor/canvas`). If you regenerate the canvas, just `cp` it over and re-do
 that single import line.
 
+## Study tools
+
+The sidebar has a dedicated **STUDY TOOLS** group (above REFERENCE) for active-recall practice — all of these auto-derive their content from the experiments and the past quizzes, and persist their state to `localStorage`.
+
+| Page | What it does |
+| --- | --- |
+| **Flashcards (SR)** | Leitner spaced-repetition deck (~160 cards) auto-generated from every Q&A, error row, and formula. Five boxes with 1 / 3 / 7 / 14 / 30-day intervals; "Due today" surfaces only what you actually need to review. |
+| **Quiz mode** | Random interleaved sampler over the full practice + Q&A bank. Self-grade right/wrong, see a streak counter and a per-experiment accuracy heatmap so you know which experiment to drill next. |
+| **Mock exam (60 min)** | Twelve to thirteen problems sized to ~40 points (mirrors the real lab final's mix). 60-minute countdown timer, solutions stay hidden until you submit (or the timer expires), score history is saved across attempts. |
+| **Skibo traps** | The specific "gotchas" past quizzes punish (rate-definition coefficient, buffer base-amount logic, log-decimal sig figs, balancing redox for charge AND mass, blank vs zero, TD vs TC, etc.). Each has a "Bait" / "Catch" pair. |
+| **Past quizzes** | Verbatim transcriptions of all seven Skibo pre-lab quizzes (Initial-rate kinetics, Pseudo-rate, LCP, BTB indicator, Buffers, Titrations, Ca(OH)₂ Ksp). Each question hides a worked solution behind a click. |
+| **Cross-cutting** | Concept map for ideas that span multiple experiments (Beer's Law, Equilibrium, Thermo, Arrhenius, redox/n electrons, log/decimal sig figs). Each row links into the relevant experiments. |
+| **Mnemonics** | Distilled hooks: spectrochemical series, OIL RIG, REDCAT, color-complement wheel, IR diagnostic pegs, plot-identifier table, sign-of-ΔG grid, and more. |
+
+Inline upgrades on every experiment page:
+
+- **TL;DR card** at the top — read just these for all 11 experiments to scrape a B+; read the rest to get the A.
+- **Step-faded worked example** in the Analysis section — tap *Reveal next step* to progressively uncover Setup → Equation → Plug-in → Answer (try the next step yourself before peeking).
+- **Related** footer at the bottom linking to other experiments touching the same concepts.
+
+### Hotkeys
+
+| Key | Action |
+| --- | --- |
+| `⌘K` / `Ctrl+K` / `/` | Open search overlay (indexes every section, including the new ones) |
+| `[` / `]` | Previous / next experiment |
+| `Esc` | Close search |
+| `Space` / `Enter` | (on Flashcards) flip card between front and back |
+| `1` / `2` / `3` / `4` | (on Flashcards, after flip) self-grade *Again* / *Hard* / *Good* / *Easy* — sets the next interval per Leitner |
+
+### Print export
+
+Hit your browser's print dialog (`⌘P` / `Ctrl+P`) to export the entire guide — every experiment, every flashcard, every mock-exam question + solution, every past quiz, and every reference pane. The print stylesheet auto-expands all collapsibles.
+
 ## Dark / light mode
 
 The app follows your OS appearance setting via

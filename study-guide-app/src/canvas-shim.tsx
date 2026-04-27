@@ -497,6 +497,35 @@ export function Stat({ value, label, tone }: StatProps) {
 }
 
 // ============================================================================
+// Countdown — small reusable MM:SS counter (e.g. for Mock Exam timer)
+// ============================================================================
+
+type CountdownProps = {
+  seconds: number;
+  label?: ReactNode;
+  warnAtSeconds?: number;
+  done?: boolean;
+};
+export function Countdown({
+  seconds,
+  label = "Time left",
+  warnAtSeconds = 600,
+  done,
+}: CountdownProps) {
+  const M = (globalThis as { Math: { max: (...n: number[]) => number; floor: (n: number) => number } }).Math;
+  const safe = M.max(0, M.floor(seconds));
+  const m = M.floor(safe / 60);
+  const s = safe % 60;
+  const text = `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  const tone: "info" | "success" | "warning" | undefined = done
+    ? "success"
+    : safe <= warnAtSeconds
+      ? "warning"
+      : "info";
+  return <Stat value={text} label={label} tone={tone} />;
+}
+
+// ============================================================================
 // Table
 // ============================================================================
 
