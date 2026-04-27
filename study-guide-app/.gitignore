@@ -8,6 +8,7 @@ dist
 
 # TypeScript incremental build artifacts
 *.tsbuildinfo
+.tsbuildinfo-node/
 
 # Vite emits these from the .ts config when running with TS Node fallback
 vite.config.js

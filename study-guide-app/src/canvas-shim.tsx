@@ -25,6 +25,14 @@ import {
 } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
+import {
+  unicodeToLatex,
+  parseMixedMath,
+  type MixedTextSegment,
+} from "./latex";
+
+export { unicodeToLatex, parseMixedMath };
+export type { MixedTextSegment };
 
 // ============================================================================
 // Theme — mimics useHostTheme()
@@ -76,7 +84,7 @@ function resolveCssVars(): HostTheme {
 export function useHostTheme(): HostTheme {
   const [theme, setTheme] = useState<HostTheme>(() => resolveCssVars());
   useEffect(() => {
-    setTheme(resolveCssVars());
+    if (typeof window === "undefined") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => setTheme(resolveCssVars());
     mq.addEventListener?.("change", onChange);
@@ -295,8 +303,30 @@ type CardCtx = {
 };
 const CardContext = createContext<CardCtx | null>(null);
 
+// Subscription list of setOpen callbacks; on `beforeprint` we force every
+// collapsible card open so the printable PDF shows all content. After print
+// (or on Esc) the original state is restored.
+const printForceOpenListeners = new Set<() => void>();
+let printListenerInstalled = false;
+function ensurePrintListener() {
+  if (printListenerInstalled || typeof window === "undefined") return;
+  printListenerInstalled = true;
+  window.addEventListener("beforeprint", () => {
+    printForceOpenListeners.forEach((fn) => fn());
+  });
+}
+
 export function Card({ children, collapsible, defaultOpen = true, style }: CardProps) {
   const [open, setOpen] = useState(!!defaultOpen);
+  useEffect(() => {
+    if (!collapsible) return;
+    ensurePrintListener();
+    const force = () => setOpen(true);
+    printForceOpenListeners.add(force);
+    return () => {
+      printForceOpenListeners.delete(force);
+    };
+  }, [collapsible]);
   const ctx: CardCtx = {
     collapsible: !!collapsible,
     open: collapsible ? open : true,
@@ -403,6 +433,8 @@ type ButtonProps = {
   onClick?: () => void;
   style?: CSSProperties;
   disabled?: boolean;
+  title?: string;
+  ariaLabel?: string;
 };
 export function Button({
   children,
@@ -410,6 +442,8 @@ export function Button({
   onClick,
   style,
   disabled,
+  title,
+  ariaLabel,
 }: ButtonProps) {
   return (
     <button
@@ -418,6 +452,8 @@ export function Button({
       onClick={onClick}
       disabled={disabled}
       style={style}
+      title={title}
+      aria-label={ariaLabel ?? title}
     >
       {children}
     </button>
@@ -518,295 +554,9 @@ export const __reactUtils = { Children, cloneElement, isValidElement, useRef, us
 // ============================================================================
 // Math rendering (KaTeX)
 // ============================================================================
+// Unicode→LaTeX preprocessing lives in ./latex (see that file for details);
+// this section just wires KaTeX onto React components.
 
-// Convert the Unicode-stylized chemistry strings used throughout the study
-// guide ("rate = k [H₂O₂]^m [I⁻]^n") into valid LaTeX. The study guide was
-// originally authored with pretty Unicode subscripts/superscripts/greek; this
-// preprocessor turns those back into proper LaTeX so KaTeX can render real,
-// typeset math instead of monospace text.
-//
-// The conversion is intentionally conservative — anything we don't recognize
-// passes through untouched.
-
-const SUBSCRIPT_MAP: Record<string, string> = {
-  "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
-  "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
-  "₊": "+", "₋": "-", "₌": "=", "₍": "(", "₎": ")",
-  "ₐ": "a", "ₑ": "e", "ₕ": "h", "ᵢ": "i", "ⱼ": "j",
-  "ₖ": "k", "ₗ": "l", "ₘ": "m", "ₙ": "n", "ₒ": "o",
-  "ₚ": "p", "ᵣ": "r", "ₛ": "s", "ₜ": "t", "ᵤ": "u",
-  "ᵥ": "v", "ₓ": "x",
-};
-
-const SUPERSCRIPT_MAP: Record<string, string> = {
-  "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
-  "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9",
-  "⁺": "+", "⁻": "-", "⁼": "=", "⁽": "(", "⁾": ")",
-  "ⁿ": "n", "ⁱ": "i", "ᵃ": "a", "ᵇ": "b", "ᶜ": "c",
-  "ᵈ": "d", "ᵉ": "e", "ᶠ": "f", "ᵍ": "g", "ʰ": "h",
-  "ʲ": "j", "ᵏ": "k", "ˡ": "l", "ᵐ": "m", "ᵒ": "o",
-  "ᵖ": "p", "ʳ": "r", "ˢ": "s", "ᵗ": "t", "ᵘ": "u",
-  "ᵛ": "v", "ʷ": "w", "ˣ": "x", "ʸ": "y", "ᶻ": "z",
-};
-
-// All multi-letter LaTeX commands have a trailing space so adjacent letters
-// don't merge into the command name (e.g. \Delta G, not \DeltaG which KaTeX
-// would render in red as an unknown command).
-const GREEK_MAP: Record<string, string> = {
-  "α": "\\alpha ", "β": "\\beta ", "γ": "\\gamma ", "δ": "\\delta ",
-  "ε": "\\varepsilon ", "ζ": "\\zeta ", "η": "\\eta ", "θ": "\\theta ",
-  "ι": "\\iota ", "κ": "\\kappa ", "λ": "\\lambda ", "μ": "\\mu ",
-  "ν": "\\nu ", "ξ": "\\xi ", "π": "\\pi ", "ρ": "\\rho ",
-  "σ": "\\sigma ", "τ": "\\tau ", "υ": "\\upsilon ", "φ": "\\varphi ",
-  "χ": "\\chi ", "ψ": "\\psi ", "ω": "\\omega ",
-  "Α": "A", "Β": "B", "Γ": "\\Gamma ", "Δ": "\\Delta ",
-  "Ε": "E", "Ζ": "Z", "Η": "H", "Θ": "\\Theta ",
-  "Ι": "I", "Κ": "K", "Λ": "\\Lambda ", "Μ": "M",
-  "Ν": "N", "Ξ": "\\Xi ", "Π": "\\Pi ", "Ρ": "P",
-  "Σ": "\\Sigma ", "Τ": "T", "Υ": "\\Upsilon ", "Φ": "\\Phi ",
-  "Χ": "X", "Ψ": "\\Psi ", "Ω": "\\Omega ",
-};
-
-const FRACTION_MAP: Record<string, string> = {
-  "½": "\\tfrac{1}{2}",
-  "¼": "\\tfrac{1}{4}",
-  "¾": "\\tfrac{3}{4}",
-  "⅓": "\\tfrac{1}{3}",
-  "⅔": "\\tfrac{2}{3}",
-  "⅕": "\\tfrac{1}{5}",
-  "⅖": "\\tfrac{2}{5}",
-  "⅗": "\\tfrac{3}{5}",
-  "⅘": "\\tfrac{4}{5}",
-  "⅙": "\\tfrac{1}{6}",
-  "⅚": "\\tfrac{5}{6}",
-  "⅛": "\\tfrac{1}{8}",
-  "⅜": "\\tfrac{3}{8}",
-  "⅝": "\\tfrac{5}{8}",
-  "⅞": "\\tfrac{7}{8}",
-};
-
-const OPERATOR_MAP: Record<string, string> = {
-  "→": "\\to ",
-  "←": "\\leftarrow ",
-  "↔": "\\leftrightarrow ",
-  "⇌": "\\rightleftharpoons ",
-  "⇋": "\\leftrightharpoons ",
-  "≈": "\\approx ",
-  "≅": "\\cong ",
-  "≠": "\\neq ",
-  "≤": "\\leq ",
-  "≥": "\\geq ",
-  "±": "\\pm ",
-  "∓": "\\mp ",
-  "×": "\\times ",
-  "·": "\\cdot ",
-  "÷": "\\div ",
-  "∝": "\\propto ",
-  "∞": "\\infty ",
-  "∫": "\\int ",
-  "∑": "\\sum ",
-  "∏": "\\prod ",
-  "√": "\\sqrt ",
-  "∂": "\\partial ",
-  "∇": "\\nabla ",
-  "°": "^{\\circ}",
-  "Å": "\\text{\\AA}",
-  "ℏ": "\\hbar ",
-};
-
-function mergeRunsToLatex(s: string): string {
-  // Convert runs of Unicode subscripts/superscripts into _{...} / ^{...}.
-  // Order: handle subscripts then superscripts then everything else.
-  let out = "";
-  let i = 0;
-  while (i < s.length) {
-    const ch = s[i];
-    if (SUBSCRIPT_MAP[ch]) {
-      let run = "";
-      while (i < s.length && SUBSCRIPT_MAP[s[i]]) {
-        run += SUBSCRIPT_MAP[s[i]];
-        i++;
-      }
-      out += run.length === 1 ? `_${run}` : `_{${run}}`;
-      continue;
-    }
-    if (SUPERSCRIPT_MAP[ch]) {
-      let run = "";
-      while (i < s.length && SUPERSCRIPT_MAP[s[i]]) {
-        run += SUPERSCRIPT_MAP[s[i]];
-        i++;
-      }
-      out += run.length === 1 ? `^${run}` : `^{${run}}`;
-      continue;
-    }
-    out += ch;
-    i++;
-  }
-  return out;
-}
-
-// Wrap chemistry-style brackets [H2O2] in \mathrm{} so they render upright,
-// not as italic math variables. Also escape spaces inside brackets safely.
-function styleChemBrackets(s: string): string {
-  // Replace [..] and {..} contents with \mathrm only if they look like a
-  // chemical species (letters, digits, +, -, parens, no math operators).
-  return s.replace(/\[([^\]\[]*)\]/g, (_, inner: string) => {
-    // Skip if inner contains LaTeX commands or arithmetic operators.
-    if (/[\\=<>~]/.test(inner)) return `[${inner}]`;
-    // Render as upright bracketed concentration.
-    return `[\\mathrm{${inner}}]`;
-  });
-}
-
-// Replace remaining Unicode chars (greek + operators) with LaTeX.
-function replaceMap(s: string, map: Record<string, string>): string {
-  let out = "";
-  for (const ch of s) {
-    out += map[ch] ?? ch;
-  }
-  return out;
-}
-
-// Common chemistry shortcuts: Ka, Kb, Ksp, Keq, etc. → \mathrm{K_a} etc.
-// We only do this for short word-after-K patterns to avoid overreach.
-function styleKVariants(s: string): string {
-  return s.replace(/\bK(sp|eq|a|b|w|c|p|f)\b/g, (_, sub: string) => `K_{\\mathrm{${sub}}}`);
-}
-
-// Multi-letter ASCII subscripts after `_` get wrapped in \mathrm{} so they
-// render upright like real chemistry subscripts (V_eq, M_NaOH, V_initial).
-// Single chars (V_2, V_a) are left alone — KaTeX handles those fine.
-// Chained underscores like V_acid_initial collapse into a single subscript:
-// V_{\mathrm{acid,\,initial}}, so KaTeX doesn't see invalid double-subscripts.
-function wrapMultiLetterSubscripts(s: string): string {
-  return s.replace(
-    /_([a-zA-Z][a-zA-Z0-9]+(?:_[a-zA-Z][a-zA-Z0-9]+)*)/g,
-    (_, w: string) => {
-      const inner = w.replace(/_/g, ",\\,");
-      return `_{\\mathrm{${inner}}}`;
-    }
-  );
-}
-
-// Same for `^` superscripts when followed by 2+ letters (rare but possible).
-function wrapMultiLetterSuperscripts(s: string): string {
-  return s.replace(/\^([a-zA-Z]{2,})\b/g, (_, w: string) => `^{\\mathrm{${w}}}`);
-}
-
-// Convert ^( ... ) and _( ... ) into ^{ ... } and _{ ... } so KaTeX treats
-// the parenthetical expression as a single super/subscript argument. Authors
-// in the source sometimes wrote e^(-Ea/RT) instead of e^{-Ea/RT}.
-function fixParenExpScripts(s: string): string {
-  return s
-    .replace(/\^\(([^()]*)\)/g, (_, e: string) => `^{(${e})}`)
-    .replace(/(?<![A-Za-z\d}])_\(([^()]*)\)/g, (_, e: string) => `_{(${e})}`);
-}
-
-// Bare chemistry formulas outside [] brackets — like HOAc, NaOH, HCl, MgSO4 —
-// should render upright with \mathrm{}. Heuristic: any token of 2+
-// "capital + optional lowercase + optional digits" sub-tokens (so HOAc, Na,
-// HCl, MgSO4 match; English proper nouns like Hoff/Beer/Newton don't because
-// they have only one capital).
-function wrapBareChemistry(s: string): string {
-  const stash: string[] = [];
-  s = s.replace(/\{[^{}]*\}/g, (m) => {
-    const i = stash.length;
-    stash.push(m);
-    return `\u0001${i}\u0002`;
-  });
-  s = s.replace(
-    /(?<![\\a-zA-Z])(?:[A-Z][a-z]?\d*){2,}(?![a-z])/g,
-    (m) => `\\mathrm{${m}}`
-  );
-  s = s.replace(/\u0001(\d+)\u0002/g, (_, i) => stash[+i]);
-  return s;
-}
-
-// Common math functions: ln, log, exp, sin, cos, tan, etc. should render
-// upright with proper spacing. KaTeX has \ln, \log, etc. for this.
-const MATH_FUNCS = [
-  "ln", "log", "exp", "sin", "cos", "tan", "sec", "csc", "cot",
-  "sinh", "cosh", "tanh", "arcsin", "arccos", "arctan",
-  "lim", "min", "max", "sup", "inf", "det",
-];
-function wrapMathFunctions(s: string): string {
-  for (const fn of MATH_FUNCS) {
-    // Whole-word match, not preceded by a backslash (already a command),
-    // letter, or digit, and not followed by a letter/digit.
-    const re = new RegExp(`(?<![\\\\a-zA-Z0-9])${fn}(?![a-zA-Z0-9])`, "g");
-    s = s.replace(re, `\\${fn}`);
-  }
-  return s;
-}
-
-// Wrap runs of plain English words inside math strings as \text{...} so they
-// render upright with proper inter-word spacing. We protect already-grouped
-// regions ({...}) so we don't double-wrap content already inside \mathrm or
-// \text. Heuristic for what counts as English:
-//   - 2+ word phrase, where each word is a Capital + 2+ lowercase OR 2+ lowercase
-//   - OR a single word of 3+ lowercase letters (or Capital + 2+ lowercase)
-// Apostrophe-continuations like "van't" are allowed.
-function wrapEnglishWords(s: string): string {
-  // Save existing {...} groups so the regex can't peer inside them.
-  const stash: string[] = [];
-  s = s.replace(/\{[^{}]*\}/g, (m) => {
-    const i = stash.length;
-    stash.push(m);
-    return `\u0001${i}\u0002`;
-  });
-
-  const wordTok = `[A-Za-z][a-z]+(?:'[a-z]+)?`;
-  const lowerStartTok = `[a-z]{3,}(?:'[a-z]+)?`;
-  // 2+ words separated by single spaces: requires the leader to be a
-  // valid word-start (3+ lowercase OR Cap+2+lowercase).
-  const multiWord =
-    `(?:[a-z]{2,}(?:'[a-z]+)?|[A-Z][a-z]{2,}(?:'[a-z]+)?)` +
-    `(?:[ \\t]+${wordTok})+`;
-  // Single word: stricter to avoid grabbing variables.
-  const singleWord = `(?:${lowerStartTok}|[A-Z][a-z]{3,}(?:'[a-z]+)?)`;
-  const combined = `(?:${multiWord}|${singleWord})`;
-  const re = new RegExp(`(?<![\\\\a-zA-Z])${combined}`, "g");
-
-  s = s.replace(re, (m) => `\\text{${m}}`);
-
-  // Restore stash.
-  s = s.replace(/\u0001(\d+)\u0002/g, (_, i) => stash[+i]);
-  return s;
-}
-
-export function unicodeToLatex(input: string): string {
-  if (!input) return "";
-  let s = input;
-  // Order matters here:
-  // 1. Convert Unicode subscript/superscript runs into _{...}/^{...}.
-  s = mergeRunsToLatex(s);
-  // 2. Convert Unicode special chars (Greek + math operators + fractions).
-  s = replaceMap(s, FRACTION_MAP);
-  s = replaceMap(s, GREEK_MAP);
-  s = replaceMap(s, OPERATOR_MAP);
-  // 3. Wrap multi-letter ASCII subscripts in \mathrm{} so they render
-  //    upright (V_eq → V_{\mathrm{eq}}). Run BEFORE English-word wrapping
-  //    so the wrapped text is hidden inside { }.
-  s = wrapMultiLetterSubscripts(s);
-  s = wrapMultiLetterSuperscripts(s);
-  // 3b. Convert ^(expr) and _(expr) into ^{(expr)} and _{(expr)}.
-  s = fixParenExpScripts(s);
-  // 4. Recognize standalone math functions (ln, log, sin, cos…) so they're
-  //    upright. Run BEFORE English-word wrapping so we don't mistake them
-  //    for plain English.
-  s = wrapMathFunctions(s);
-  // 5. Recognize bare chemistry formulas (HOAc, NaOH, HCl, MgSO4) and wrap
-  //    them in \mathrm{}. Run BEFORE English-word wrapping for proper nouns.
-  s = wrapBareChemistry(s);
-  // 6. Wrap remaining English words in \text{} so they render uprightly
-  //    with normal inter-letter spacing instead of as italic variables.
-  s = wrapEnglishWords(s);
-  // 7. Style chemistry-style brackets [X] → [\mathrm{X}].
-  s = styleChemBrackets(s);
-  // 8. Pretty up Ka, Kb, Ksp, Keq, etc.
-  s = styleKVariants(s);
-  return s;
-}
 
 type MathProps = {
   children: string;
@@ -828,6 +578,18 @@ function renderKatex(latex: string, display: boolean): string {
   }
 }
 
+const katexHtmlCache = new Map<string, string>();
+
+function renderKatexCached(latex: string, display: boolean): string {
+  const key = (display ? "B|" : "I|") + latex;
+  let html = katexHtmlCache.get(key);
+  if (html == null) {
+    html = renderKatex(latex, display);
+    katexHtmlCache.set(key, html);
+  }
+  return html;
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -837,7 +599,7 @@ function escapeHtml(s: string): string {
 
 export function Math({ children, display, style }: MathProps) {
   const latex = useMemo(() => unicodeToLatex(children), [children]);
-  const html = useMemo(() => renderKatex(latex, !!display), [latex, display]);
+  const html = useMemo(() => renderKatexCached(latex, !!display), [latex, display]);
   return (
     <span
       className={display ? "cs-math-block" : "cs-math-inline"}
@@ -849,7 +611,7 @@ export function Math({ children, display, style }: MathProps) {
 
 export function MathBlock({ children, style }: { children: string; style?: CSSProperties }) {
   const latex = useMemo(() => unicodeToLatex(children), [children]);
-  const html = useMemo(() => renderKatex(latex, true), [latex]);
+  const html = useMemo(() => renderKatexCached(latex, true), [latex]);
   return (
     <div
       className="cs-math-block-wrap"
@@ -859,45 +621,8 @@ export function MathBlock({ children, style }: { children: string; style?: CSSPr
   );
 }
 
-// Render a paragraph with optional inline math delimited by $...$ or \(...\)
-// or display math via $$...$$ / \[...\]. Anything outside the delimiters is
-// rendered as plain text.
-type MixedTextSegment =
-  | { type: "text"; value: string }
-  | { type: "math"; value: string; display: boolean };
-
-export function parseMixedMath(input: string): MixedTextSegment[] {
-  const out: MixedTextSegment[] = [];
-  const re = /(\$\$[^$]+\$\$|\\\[[\s\S]+?\\\]|\$[^$\n]+\$|\\\([\s\S]+?\\\))/g;
-  let lastIdx = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(input)) !== null) {
-    if (m.index > lastIdx) {
-      out.push({ type: "text", value: input.slice(lastIdx, m.index) });
-    }
-    const tok = m[0];
-    let display = false;
-    let inner = "";
-    if (tok.startsWith("$$")) {
-      display = true;
-      inner = tok.slice(2, -2);
-    } else if (tok.startsWith("\\[")) {
-      display = true;
-      inner = tok.slice(2, -2);
-    } else if (tok.startsWith("\\(")) {
-      inner = tok.slice(2, -2);
-    } else {
-      inner = tok.slice(1, -1);
-    }
-    out.push({ type: "math", value: inner, display });
-    lastIdx = m.index + tok.length;
-  }
-  if (lastIdx < input.length) {
-    out.push({ type: "text", value: input.slice(lastIdx) });
-  }
-  return out;
-}
-
+// `parseMixedMath` is re-exported above from ./latex; the React wrapper
+// component lives here so it can use `useMemo` and reference `<Math>`.
 export function MixedText({ text, style }: { text: string; style?: CSSProperties }) {
   const segments = useMemo(() => parseMixedMath(text), [text]);
   if (segments.length === 1 && segments[0].type === "text") {
