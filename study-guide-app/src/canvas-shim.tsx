@@ -693,6 +693,67 @@ function wrapMultiLetterSuperscripts(s: string): string {
   return s.replace(/\^([a-zA-Z]{2,})\b/g, (_, w: string) => `^{\\mathrm{${w}}}`);
 }
 
+// Tighten scientific notation. After the Unicode passes, "1.0×10⁻³" becomes
+// "1.0\times 10^{-3}", but we want a thin space and a properly braced
+// exponent: "1.0\,\times 10^{-3}". Also catches "1.0 \times 10^-3" → braces.
+function formatScientific(s: string): string {
+  // Add braces to bare-exponent forms: \times 10^-3 → \times 10^{-3}.
+  s = s.replace(/\\times\s*10\^(-?\d+)\b/g, "\\times 10^{$1}");
+  // Insert a thin space between a numeric and \times (1.0\times → 1.0\,\times).
+  s = s.replace(/(\d)\s*\\times\s*10\^/g, "$1\\,\\times 10^");
+  return s;
+}
+
+// Insert a thin space between a numeric value and a following unit token.
+// "25 °C" → "25\,°C" (already converted to ^{\circ}C upstream, but this
+// catches plain digit+space+unit forms). Conservative: only fires when the
+// unit is one of the canonical SI/chemistry tokens.
+const UNIT_TOKENS = [
+  "M", "mol", "mmol", "kg", "mg", "g",
+  "J", "kJ", "kcal", "cal",
+  "min", "ms", "s",
+  "K", "mL", "L",
+  "nm", "pm", "cm", "mm", "km",
+  "atm", "Pa", "kPa", "torr", "bar",
+  "Hz", "kHz",
+  "C", "F", "V", "A", "T",
+];
+function valueUnitSpace(s: string): string {
+  const tokenAlt = UNIT_TOKENS.join("|");
+  // digit (or closing brace) followed by space and a unit token.
+  const re = new RegExp(`(\\d|\\})\\s+(${tokenAlt})\\b`, "g");
+  return s.replace(re, (_m, lhs: string, unit: string) => `${lhs}\\,\\mathrm{${unit}}`);
+}
+
+// Compound units: a run of unit tokens connected by \cdot, /, or whitespace
+// where at least one token has an explicit exponent (e.g. M^{-1}\cdot s^{-1},
+// J/(mol\cdot K), L\cdot atm/(mol\cdot K)). Wrap the whole run in \mathrm{}
+// and replace \cdot with a thin space for tighter typography. Skip content
+// already inside \text{...} or \mathrm{...} groups so we don't double-wrap.
+function wrapCompoundUnits(s: string): string {
+  const stash: string[] = [];
+  s = s.replace(/\\(?:text|mathrm)\{[^{}]*\}/g, (m) => {
+    const i = stash.length;
+    stash.push(m);
+    return `${i}`;
+  });
+  const tokenAlt = UNIT_TOKENS.join("|");
+  const expPart = `(?:\\^\\{[^{}]*\\}|\\^-?\\d)?`;
+  const tokenPart = `(?:${tokenAlt})${expPart}`;
+  const sep = `(?:\\\\cdot|\\\\,|/)`;
+  const run = `${tokenPart}(?:\\s*${sep}\\s*${tokenPart}|\\s*${sep}\\s*\\(${tokenPart}(?:\\s*${sep}\\s*${tokenPart})*\\))+`;
+  const re = new RegExp(`(?<![A-Za-z\\\\{])(${run})`, "g");
+  s = s.replace(re, (m) => `\\mathrm{${m.replace(/\\cdot/g, "\\,")}}`);
+  s = s.replace(/(\d+)/g, (_, i) => stash[+i]);
+  return s;
+}
+
+// Escape stray % signs so KaTeX doesn't treat them as comment starts.
+// Skip already-escaped ones.
+function escapePercent(s: string): string {
+  return s.replace(/(?<!\\)%/g, "\\%");
+}
+
 // Convert ^( ... ) and _( ... ) into ^{ ... } and _{ ... } so KaTeX treats
 // the parenthetical expression as a single super/subscript argument. Authors
 // in the source sometimes wrote e^(-Ea/RT) instead of e^{-Ea/RT}.
@@ -795,9 +856,15 @@ export function unicodeToLatex(input: string): string {
   //    upright. Run BEFORE English-word wrapping so we don't mistake them
   //    for plain English.
   s = wrapMathFunctions(s);
+  // 4b. Tighten scientific notation: brace exponents and add thin space
+  //     between value and \times.
+  s = formatScientific(s);
   // 5. Recognize bare chemistry formulas (HOAc, NaOH, HCl, MgSO4) and wrap
   //    them in \mathrm{}. Run BEFORE English-word wrapping for proper nouns.
   s = wrapBareChemistry(s);
+  // 5b. Wrap compound unit runs (M^{-1}\cdot s^{-1}, J/(mol\cdot K)) in
+  //     \mathrm{} so they render upright.
+  s = wrapCompoundUnits(s);
   // 6. Wrap remaining English words in \text{} so they render uprightly
   //    with normal inter-letter spacing instead of as italic variables.
   s = wrapEnglishWords(s);
@@ -805,6 +872,10 @@ export function unicodeToLatex(input: string): string {
   s = styleChemBrackets(s);
   // 8. Pretty up Ka, Kb, Ksp, Keq, etc.
   s = styleKVariants(s);
+  // 9. Insert thin space between numeric value and a trailing unit token.
+  s = valueUnitSpace(s);
+  // 10. Escape stray percent signs so KaTeX doesn't treat them as comments.
+  s = escapePercent(s);
   return s;
 }
 

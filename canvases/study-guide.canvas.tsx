@@ -91,22 +91,22 @@ const experiments: Experiment[] = [
         body:
           "For 2H₂O₂(aq) → 2H₂O(l) + O₂(g), the reaction rate is defined so it is positive and identical regardless of which species you track:",
         equations: [
-          "rate = -½ d[H₂O₂]/dt = +d[O₂]/dt",
+          "\\text{rate} = -\\tfrac{1}{2}\\,\\frac{d[H₂O₂]}{dt} = +\\frac{d[O₂]}{dt}",
         ],
       },
       {
         heading: "Rate law",
         body:
           "The rate law is determined experimentally and need NOT match the stoichiometric coefficients:",
-        equations: ["rate = k [H₂O₂]^m [I⁻]^n"],
+        equations: ["\\text{rate} = k\\,[H₂O₂]^{m}\\,[I⁻]^{n}"],
       },
       {
         heading: "Method of initial rates",
         body:
           "Run two trials in which only one concentration changes between them. Then m and n are extracted from ratios:",
         equations: [
-          "rate₂ / rate₁ = ([H₂O₂]₂ / [H₂O₂]₁)^m   (with [I⁻] fixed)",
-          "rate₃ / rate₁ = ([I⁻]₃ / [I⁻]₁)^n     (with [H₂O₂] fixed)",
+          "\\frac{\\text{rate}_2}{\\text{rate}_1} = \\left(\\frac{[H₂O₂]_2}{[H₂O₂]_1}\\right)^{m} \\quad (\\text{with } [\\mathrm{I^-}] \\text{ fixed})",
+          "\\frac{\\text{rate}_3}{\\text{rate}_1} = \\left(\\frac{[I⁻]_3}{[I⁻]_1}\\right)^{n} \\quad (\\text{with } [\\mathrm{H_2O_2}] \\text{ fixed})",
         ],
       },
       {
@@ -115,7 +115,7 @@ const experiments: Experiment[] = [
           "Using the ideal-gas law at room T and atmospheric P, n_O₂ = PV/RT. A plot of n_O₂ vs. time has slope = d(n_O₂)/dt, which equals the rate of O₂ formation in moles/s. Divide by the reaction-vessel volume to get rate in M/s.",
         equations: [
           "PV = nRT",
-          "rate = (1/V_solution) · d(n_O₂)/dt",
+          "\\text{rate} = \\frac{1}{V_{\\text{solution}}} \\cdot \\frac{d(n_{O_2})}{dt}",
         ],
       },
       {
@@ -161,7 +161,7 @@ const experiments: Experiment[] = [
     dataAnalysis: [
       {
         heading: "Step 1 — Convert V(O₂) → n(O₂)",
-        equations: ["n_O₂ = P · V / (R · T)"],
+        equations: ["n_{O_2} = \\frac{P \\cdot V}{R \\cdot T}"],
         body: "Use the SAME P and T for every trial.",
       },
       {
@@ -172,9 +172,9 @@ const experiments: Experiment[] = [
       {
         heading: "Step 3 — Solve for m, n, k",
         equations: [
-          "m = log(rate₂/rate₁) / log([H₂O₂]₂/[H₂O₂]₁)",
-          "n = log(rate₃/rate₁) / log([I⁻]₃/[I⁻]₁)",
-          "k = rate / ([H₂O₂]^m [I⁻]^n)",
+          "m = \\dfrac{\\log\\!\\left(\\text{rate}_2/\\text{rate}_1\\right)}{\\log\\!\\left([H₂O₂]_2/[H₂O₂]_1\\right)}",
+          "n = \\dfrac{\\log\\!\\left(\\text{rate}_3/\\text{rate}_1\\right)}{\\log\\!\\left([I⁻]_3/[I⁻]_1\\right)}",
+          "k = \\dfrac{\\text{rate}}{[H₂O₂]^{m}\\,[I⁻]^{n}}",
         ],
         body:
           "If doubling [H₂O₂] doubles the rate, m = 1; if doubling it quadruples the rate, m = 2; if rate is unchanged, m = 0.",
@@ -290,7 +290,7 @@ const experiments: Experiment[] = [
     theory: [
       {
         heading: "Beer's Law",
-        equations: ["A = ε · b · c"],
+        equations: ["A = \\varepsilon \\cdot b \\cdot c"],
         body:
           "Absorbance A is directly proportional to dye concentration c when ε (molar absorptivity) and b (path length, ~1 cm) are constant. So A ∝ [dye]: you can substitute A everywhere [dye] would appear in the rate law.",
       },
@@ -302,9 +302,9 @@ const experiments: Experiment[] = [
       {
         heading: "Integrated rate laws (test plots)",
         equations: [
-          "0th order: [A] = [A]₀ − k_obs·t        (A vs. t is linear)",
-          "1st order: ln[A] = ln[A]₀ − k_obs·t   (ln A vs. t is linear)",
-          "2nd order: 1/[A] = 1/[A]₀ + k_obs·t   (1/A vs. t is linear)",
+          "\\text{0th order:}\\quad [A] = [A]_0 - k_{\\text{obs}}\\,t \\quad\\text{(}A\\text{ vs. }t\\text{ linear)}",
+          "\\text{1st order:}\\quad \\ln[A] = \\ln[A]_0 - k_{\\text{obs}}\\,t \\quad\\text{(}\\ln A\\text{ vs. }t\\text{ linear)}",
+          "\\text{2nd order:}\\quad \\frac{1}{[A]} = \\frac{1}{[A]_0} + k_{\\text{obs}}\\,t \\quad\\text{(}1/A\\text{ vs. }t\\text{ linear)}",
         ],
         body:
           "Whichever plot is straight identifies the order in dye. The slope = ±k_obs (sign depends on which plot).",
@@ -316,7 +316,7 @@ const experiments: Experiment[] = [
       },
       {
         heading: "Half-life (1st order)",
-        equations: ["t₁/₂ = ln 2 / k_obs ≈ 0.693 / k_obs"],
+        equations: ["t_{1/2} = \\frac{\\ln 2}{k_{\\text{obs}}} \\approx \\frac{0.693}{k_{\\text{obs}}}"],
         body:
           "For 1st order, t₁/₂ is independent of [A]₀ — a useful fingerprint of 1st-order behavior.",
       },
@@ -368,11 +368,11 @@ const experiments: Experiment[] = [
       },
       {
         heading: "Find order n in bleach",
-        equations: ["n = log(k_obs,2 / k_obs,1) / log([bleach]₂ / [bleach]₁)"],
+        equations: ["n = \\dfrac{\\log\\!\\left(k_{\\text{obs},2}/k_{\\text{obs},1}\\right)}{\\log\\!\\left([bleach]_2/[bleach]_1\\right)}"],
       },
       {
         heading: "True k from k_obs",
-        equations: ["k_true = k_obs / [bleach]^n"],
+        equations: ["k_{\\text{true}} = \\frac{k_{\\text{obs}}}{[bleach]^{n}}"],
       },
       {
         heading: "Worked example",
@@ -483,10 +483,10 @@ const experiments: Experiment[] = [
       {
         heading: "Reaction quotient and direction of shift",
         equations: [
-          "Q = [products]^… / [reactants]^…",
-          "Q < K → shifts forward (toward products)",
-          "Q > K → shifts backward (toward reactants)",
-          "Q = K → no shift (at equilibrium)",
+          "Q = \\frac{\\prod[\\text{products}]^{\\nu}}{\\prod[\\text{reactants}]^{\\nu}}",
+          "Q < K \\;\\Rightarrow\\; \\text{shifts forward (toward products)}",
+          "Q > K \\;\\Rightarrow\\; \\text{shifts backward (toward reactants)}",
+          "Q = K \\;\\Rightarrow\\; \\text{no shift (at equilibrium)}",
         ],
       },
       {
@@ -645,15 +645,15 @@ const experiments: Experiment[] = [
       {
         heading: "Indicator equilibrium",
         equations: [
-          "HIn(yellow) ⇌ H⁺ + In⁻(blue)",
-          "K_In = [H⁺][In⁻]/[HIn]",
-          "pK_In = pH + log([HIn]/[In⁻]) = pH − log([In⁻]/[HIn])",
+          "\\mathrm{HIn}\\,(\\text{yellow}) \\rightleftharpoons \\mathrm{H^+} + \\mathrm{In^-}\\,(\\text{blue})",
+          "K_{\\text{In}} = \\frac{[\\mathrm{H^+}]\\,[\\mathrm{In^-}]}{[\\mathrm{HIn}]}",
+          "\\mathrm{p}K_{\\text{In}} = \\mathrm{pH} + \\log\\frac{[\\mathrm{HIn}]}{[\\mathrm{In^-}]} = \\mathrm{pH} - \\log\\frac{[\\mathrm{In^-}]}{[\\mathrm{HIn}]}",
         ],
       },
       {
         heading: "Henderson-Hasselbalch reformulation",
         equations: [
-          "pH = pK_In + log([In⁻]/[HIn])",
+          "\\mathrm{pH} = \\mathrm{p}K_{\\text{In}} + \\log\\frac{[\\mathrm{In^-}]}{[\\mathrm{HIn}]}",
         ],
         body:
           "When [In⁻] = [HIn], the log term is 0 and pH = pK_In — that pH is where the indicator color is the midpoint between yellow and blue (green).",
@@ -663,8 +663,8 @@ const experiments: Experiment[] = [
         body:
           "At λ_HIn (~430 nm) HIn absorbs strongly, In⁻ does not (or barely). At λ_In⁻ (~615 nm) In⁻ absorbs strongly, HIn does not. So A(430) ∝ [HIn], A(615) ∝ [In⁻].",
         equations: [
-          "A_HIn = ε_HIn · b · [HIn]",
-          "A_In⁻ = ε_In⁻ · b · [In⁻]",
+          "A_{\\mathrm{HIn}} = \\varepsilon_{\\mathrm{HIn}} \\cdot b \\cdot [\\mathrm{HIn}]",
+          "A_{\\mathrm{In^-}} = \\varepsilon_{\\mathrm{In^-}} \\cdot b \\cdot [\\mathrm{In^-}]",
         ],
       },
       {
@@ -706,8 +706,8 @@ const experiments: Experiment[] = [
       {
         heading: "Compute [HIn] and [In⁻] in each buffer",
         equations: [
-          "[HIn] = A(λ_HIn) / (ε_HIn · b)",
-          "[In⁻] = A(λ_In⁻) / (ε_In⁻ · b)",
+          "[\\mathrm{HIn}] = \\frac{A(\\lambda_{\\mathrm{HIn}})}{\\varepsilon_{\\mathrm{HIn}} \\cdot b}",
+          "[\\mathrm{In^-}] = \\frac{A(\\lambda_{\\mathrm{In^-}})}{\\varepsilon_{\\mathrm{In^-}} \\cdot b}",
         ],
       },
       {
@@ -821,8 +821,8 @@ const experiments: Experiment[] = [
       {
         heading: "Henderson-Hasselbalch",
         equations: [
-          "Ka = [H⁺][A⁻]/[HA]",
-          "pH = pKa + log([A⁻]/[HA])",
+          "K_a = \\frac{[\\mathrm{H^+}]\\,[\\mathrm{A^-}]}{[\\mathrm{HA}]}",
+          "\\mathrm{pH} = \\mathrm{p}K_a + \\log\\frac{[\\mathrm{A^-}]}{[\\mathrm{HA}]}",
         ],
         body:
           "Maximally effective when [A⁻] ≈ [HA] (ratio near 1 → log term near 0 → pH ≈ pKa). The 'useful range' is pKa ± 1.",
@@ -1013,9 +1013,9 @@ const experiments: Experiment[] = [
       {
         heading: "Phosphoric acid — three steps",
         equations: [
-          "H₃PO₄ ⇌ H⁺ + H₂PO₄⁻   pKa1 ≈ 2.15",
-          "H₂PO₄⁻ ⇌ H⁺ + HPO₄²⁻   pKa2 ≈ 7.20",
-          "HPO₄²⁻ ⇌ H⁺ + PO₄³⁻    pKa3 ≈ 12.35",
+          "\\mathrm{H_3PO_4} \\rightleftharpoons \\mathrm{H^+} + \\mathrm{H_2PO_4^-} \\qquad \\mathrm{p}K_{a1} \\approx 2.15",
+          "\\mathrm{H_2PO_4^-} \\rightleftharpoons \\mathrm{H^+} + \\mathrm{HPO_4^{2-}} \\qquad \\mathrm{p}K_{a2} \\approx 7.20",
+          "\\mathrm{HPO_4^{2-}} \\rightleftharpoons \\mathrm{H^+} + \\mathrm{PO_4^{3-}} \\qquad \\mathrm{p}K_{a3} \\approx 12.35",
         ],
         body:
           "First two equivalence points are sharp. The third is obscured because pKa3 is so close to that of water.",
@@ -1023,9 +1023,10 @@ const experiments: Experiment[] = [
       {
         heading: "Concentration from equivalence volume",
         equations: [
-          "moles acid = (M_NaOH)(V_eq) for monoprotic",
-          "moles HOAc = (M_NaOH)(V_eq); [HOAc]₀ = moles / V_acid_initial",
-          "for H₃PO₄ to first eq: moles H₃PO₄ = (M_NaOH)(V_eq1)",
+          "\\text{moles acid} = M_{\\mathrm{NaOH}} \\cdot V_{\\text{eq}} \\quad \\text{(monoprotic)}",
+          "\\text{moles HOAc} = M_{\\mathrm{NaOH}} \\cdot V_{\\text{eq}}",
+          "[\\mathrm{HOAc}]_0 = \\frac{\\text{moles}}{V_{\\text{acid, initial}}}",
+          "\\text{for } \\mathrm{H_3PO_4} \\text{ to first eq:} \\quad \\text{moles } \\mathrm{H_3PO_4} = M_{\\mathrm{NaOH}} \\cdot V_{\\text{eq},1}",
         ],
       },
     ],
@@ -1184,9 +1185,9 @@ const experiments: Experiment[] = [
       {
         heading: "Ksp expression for Ca(OH)₂",
         equations: [
-          "Ca(OH)₂(s) ⇌ Ca²⁺(aq) + 2 OH⁻(aq)",
-          "Ksp = [Ca²⁺][OH⁻]²",
-          "If s = molar solubility, then [Ca²⁺] = s and [OH⁻] = 2s, so Ksp = 4s³",
+          "\\mathrm{Ca(OH)_2}(s) \\rightleftharpoons \\mathrm{Ca^{2+}}(aq) + 2\\,\\mathrm{OH^-}(aq)",
+          "K_{\\mathrm{sp}} = [\\mathrm{Ca^{2+}}]\\,[\\mathrm{OH^-}]^{2}",
+          "\\text{If } s = \\text{molar solubility, then } [\\mathrm{Ca^{2+}}] = s,\\; [\\mathrm{OH^-}] = 2s \\;\\Rightarrow\\; K_{\\mathrm{sp}} = 4 s^{3}",
         ],
       },
       {
@@ -1197,9 +1198,9 @@ const experiments: Experiment[] = [
       {
         heading: "Thermodynamic relationships",
         equations: [
-          "ΔG° = −RT ln K",
-          "ΔG° = ΔH° − T ΔS°",
-          "ln K = −ΔH°/(R·T) + ΔS°/R   (van't Hoff)",
+          "\\Delta G^{\\circ} = -RT\\,\\ln K",
+          "\\Delta G^{\\circ} = \\Delta H^{\\circ} - T\\,\\Delta S^{\\circ}",
+          "\\ln K = -\\frac{\\Delta H^{\\circ}}{R\\,T} + \\frac{\\Delta S^{\\circ}}{R} \\quad \\text{(van't Hoff)}",
         ],
         body:
           "Plot ln Ksp vs. 1/T (in K⁻¹). Slope = −ΔH°/R. Intercept = ΔS°/R.",
@@ -1251,10 +1252,10 @@ const experiments: Experiment[] = [
       {
         heading: "From titration to Ksp",
         equations: [
-          "moles OH⁻ = M_HCl · V_HCl_eq",
-          "[OH⁻] = moles / V_aliquot",
-          "s = [OH⁻]/2 = [Ca²⁺]",
-          "Ksp = 4 s³",
+          "\\text{moles } \\mathrm{OH^-} = M_{\\mathrm{HCl}} \\cdot V_{\\mathrm{HCl,\\,eq}}",
+          "[\\mathrm{OH^-}] = \\frac{\\text{moles}}{V_{\\text{aliquot}}}",
+          "s = \\frac{[\\mathrm{OH^-}]}{2} = [\\mathrm{Ca^{2+}}]",
+          "K_{\\mathrm{sp}} = 4\\,s^{3}",
         ],
       },
       {
@@ -1364,9 +1365,9 @@ const experiments: Experiment[] = [
       {
         heading: "Standard cell potential",
         equations: [
-          "E°_cell = E°_cathode − E°_anode",
-          "ΔG° = −nFE°_cell",
-          "Spontaneous if E°_cell > 0",
+          "E^{\\circ}_{\\text{cell}} = E^{\\circ}_{\\text{cathode}} - E^{\\circ}_{\\text{anode}}",
+          "\\Delta G^{\\circ} = -n F E^{\\circ}_{\\text{cell}}",
+          "\\text{Spontaneous if } E^{\\circ}_{\\text{cell}} > 0",
         ],
         body:
           "Always look up REDUCTION potentials in the table. The species with the more positive E°_red goes on the cathode side (gets reduced); the other is reversed (oxidized) on the anode side.",
@@ -1374,8 +1375,8 @@ const experiments: Experiment[] = [
       {
         heading: "Nernst equation",
         equations: [
-          "E = E° − (RT/nF) ln Q",
-          "At 25°C: E = E° − (0.0592/n) log Q",
+          "E = E^{\\circ} - \\frac{RT}{nF}\\,\\ln Q",
+          "\\text{At } 25\\,^{\\circ}\\mathrm{C}: \\quad E = E^{\\circ} - \\frac{0.0592}{n}\\,\\log Q",
         ],
         body:
           "Q is the reaction quotient written for the cell reaction as a whole. As the cell discharges, Q → K, ln Q → ln K, E → 0 (dead battery).",
@@ -1383,11 +1384,11 @@ const experiments: Experiment[] = [
       {
         heading: "Faraday's constants & laws",
         equations: [
-          "F = 96 485 C/mol e⁻",
-          "Q (charge) = I · t",
-          "moles e⁻ = Q / F = I·t / F",
-          "moles metal = (moles e⁻) / n  where n = electrons per metal atom",
-          "mass = moles metal · M",
+          "F = 96\\,485\\,\\mathrm{C/mol\\;e^-}",
+          "Q_{\\text{charge}} = I \\cdot t",
+          "\\text{moles } e^- = \\frac{Q}{F} = \\frac{I\\,t}{F}",
+          "\\text{moles metal} = \\frac{\\text{moles } e^-}{n} \\quad \\text{(}n = \\text{electrons per metal atom)}",
+          "\\text{mass} = \\text{moles metal} \\cdot M",
         ],
       },
       {
@@ -1445,11 +1446,11 @@ const experiments: Experiment[] = [
       {
         heading: "Electrolytic cell — Cu plating",
         equations: [
-          "Q (C) = I (A) · t (s)",
-          "moles e⁻ = Q / F",
-          "moles Cu = moles e⁻ / 2     (Cu²⁺ + 2e⁻ → Cu)",
-          "mass Cu predicted = moles Cu · 63.55 g/mol",
-          "% recovery = (mass measured / mass predicted) · 100",
+          "Q\\,[\\mathrm{C}] = I\\,[\\mathrm{A}] \\cdot t\\,[\\mathrm{s}]",
+          "\\text{moles } e^- = \\frac{Q}{F}",
+          "\\text{moles Cu} = \\frac{\\text{moles } e^-}{2} \\quad (\\mathrm{Cu^{2+}} + 2e^- \\to \\mathrm{Cu})",
+          "\\text{mass Cu predicted} = \\text{moles Cu} \\cdot 63.55\\,\\mathrm{g/mol}",
+          "\\%\\,\\text{recovery} = \\frac{\\text{mass measured}}{\\text{mass predicted}} \\cdot 100",
         ],
       },
       {
@@ -1562,9 +1563,9 @@ const experiments: Experiment[] = [
       {
         heading: "Iron corrosion as a localized galvanic cell",
         equations: [
-          "Anode (where iron is being lost): Fe → Fe²⁺ + 2e⁻",
-          "Cathode (where O₂/H⁺ is reduced): O₂ + 2H₂O + 4e⁻ → 4 OH⁻  (neutral)",
-          "                                  2 H⁺ + 2e⁻ → H₂          (acidic)",
+          "\\text{Anode (Fe lost):}\\quad \\mathrm{Fe} \\to \\mathrm{Fe^{2+}} + 2e^-",
+          "\\text{Cathode, neutral:}\\quad \\mathrm{O_2} + 2\\mathrm{H_2O} + 4e^- \\to 4\\,\\mathrm{OH^-}",
+          "\\text{Cathode, acidic:}\\quad 2\\mathrm{H^+} + 2e^- \\to \\mathrm{H_2}",
         ],
         body:
           "Even on a single iron nail, mechanical strain (the head and the point are work-hardened) creates anodic and cathodic regions. Strained metal is slightly more easily oxidized → those become anode sites.",
@@ -1579,9 +1580,9 @@ const experiments: Experiment[] = [
         body:
           "Couple iron to a metal that is MORE easily oxidized (more negative E°_red). The other metal becomes the anode and is consumed, while iron is now the cathode (protected — it's being reduced if anything, certainly not oxidized).",
         equations: [
-          "Zn²⁺ + 2e⁻ → Zn   E° = −0.76 V  (more negative → easier to oxidize than Fe)",
-          "Fe²⁺ + 2e⁻ → Fe   E° = −0.44 V",
-          "Cu²⁺ + 2e⁻ → Cu   E° = +0.34 V  (less easily oxidized → makes Fe corrode WORSE)",
+          "\\mathrm{Zn^{2+}} + 2e^- \\to \\mathrm{Zn} \\qquad E^{\\circ} = -0.76\\,\\mathrm{V} \\quad \\text{(easier to oxidize than Fe)}",
+          "\\mathrm{Fe^{2+}} + 2e^- \\to \\mathrm{Fe} \\qquad E^{\\circ} = -0.44\\,\\mathrm{V}",
+          "\\mathrm{Cu^{2+}} + 2e^- \\to \\mathrm{Cu} \\qquad E^{\\circ} = +0.34\\,\\mathrm{V} \\quad \\text{(makes Fe corrode worse)}",
         ],
       },
       {
@@ -1746,8 +1747,8 @@ const experiments: Experiment[] = [
         body:
           "In an octahedral field, the five d orbitals split: the three (dxy, dxz, dyz) form the t₂g set (lower energy, 0.4 Δ_o below average); the two (dz², dx²−y²) form the eg set (higher energy, 0.6 Δ_o above average). The splitting energy is Δ_o (or 10 Dq).",
         equations: [
-          "E(eg) − E(t₂g) = Δ_o",
-          "Δ_o = h c / λ_max  (per molecule, then × N_A for kJ/mol)",
+          "E(e_g) - E(t_{2g}) = \\Delta_o",
+          "\\Delta_o = \\frac{h\\,c}{\\lambda_{\\max}} \\quad \\text{(per molecule; multiply by } N_A \\text{ for kJ/mol)}",
         ],
       },
       {
@@ -1809,9 +1810,10 @@ const experiments: Experiment[] = [
       {
         heading: "Computing Δ_o",
         equations: [
-          "E (J) = h c / λ_max ; with λ in meters, h = 6.626×10⁻³⁴ J·s, c = 3.00×10⁸ m/s",
-          "Δ_o (kJ/mol) = N_A · E (J) / 1000",
-          "Convenient: Δ_o (kJ/mol) ≈ 1.196×10⁵ / λ(nm)",
+          "E\\,[\\mathrm{J}] = \\frac{h\\,c}{\\lambda_{\\max}}",
+          "h = 6.626 \\times 10^{-34}\\,\\mathrm{J\\,s}, \\quad c = 3.00 \\times 10^{8}\\,\\mathrm{m/s}",
+          "\\Delta_o\\,[\\mathrm{kJ/mol}] = \\frac{N_A \\cdot E}{1000}",
+          "\\text{Convenient:}\\quad \\Delta_o\\,[\\mathrm{kJ/mol}] \\approx \\frac{1.196 \\times 10^{5}}{\\lambda\\,[\\mathrm{nm}]}",
         ],
       },
       {
@@ -2120,90 +2122,167 @@ const experiments: Experiment[] = [
 // REFERENCE SECTIONS
 // ------------------------------------------------------------
 
-const formulaGroups: { heading: string; items: { name: string; eq: string; note?: string }[] }[] =
+const formulaGroups: { heading: string; items: { name: string; eq: string | string[]; note?: string }[] }[] =
   [
     {
       heading: "Solutions & stoichiometry",
       items: [
-        { name: "Molarity", eq: "M = mol solute / L solution" },
+        { name: "Molarity", eq: "M = \\dfrac{\\text{mol solute}}{\\text{L solution}}" },
         {
           name: "Dilution",
-          eq: "M₁V₁ = M₂V₂",
+          eq: "M_1 V_1 = M_2 V_2",
           note: "Moles unchanged on dilution. Use any volume units as long as both sides match.",
         },
-        { name: "Mass percent", eq: "%m = (mass solute / mass solution) × 100" },
-        { name: "ppm (water, dilute)", eq: "ppm ≈ mg solute / L solution" },
+        { name: "Mass percent", eq: "\\%\\,m = \\dfrac{\\text{mass solute}}{\\text{mass solution}} \\times 100" },
+        { name: "ppm (water, dilute)", eq: "\\text{ppm} \\approx \\dfrac{\\text{mg solute}}{\\text{L solution}}" },
         {
           name: "% yield",
-          eq: "% yield = (actual / theoretical) × 100",
+          eq: "\\%\\,\\text{yield} = \\dfrac{\\text{actual}}{\\text{theoretical}} \\times 100",
         },
       ],
     },
     {
       heading: "Acid-base equilibria",
       items: [
-        { name: "Water ion product", eq: "Kw = [H⁺][OH⁻] = 1.0×10⁻¹⁴ at 25 °C" },
-        { name: "pH / pOH", eq: "pH = −log[H⁺]; pOH = −log[OH⁻]; pH + pOH = 14 (25 °C)" },
-        { name: "Ka·Kb relation", eq: "Ka · Kb = Kw" },
-        { name: "Henderson-Hasselbalch", eq: "pH = pKa + log([A⁻]/[HA])" },
+        { name: "Water ion product", eq: "K_w = [\\mathrm{H^+}]\\,[\\mathrm{OH^-}] = 1.0 \\times 10^{-14} \\;\\text{at}\\; 25\\,^{\\circ}\\mathrm{C}" },
+        {
+          name: "pH / pOH",
+          eq: [
+            "\\mathrm{pH} = -\\log[\\mathrm{H^+}]",
+            "\\mathrm{pOH} = -\\log[\\mathrm{OH^-}]",
+            "\\mathrm{pH} + \\mathrm{pOH} = 14 \\quad (25\\,^{\\circ}\\mathrm{C})",
+          ],
+        },
+        { name: "Ka·Kb relation", eq: "K_a \\cdot K_b = K_w" },
+        { name: "Henderson-Hasselbalch", eq: "\\mathrm{pH} = \\mathrm{p}K_a + \\log\\dfrac{[\\mathrm{A^-}]}{[\\mathrm{HA}]}" },
         {
           name: "% ionization",
-          eq: "% ionization = ([H⁺]/[HA]₀) · 100",
+          eq: "\\%\\,\\text{ionization} = \\dfrac{[\\mathrm{H^+}]}{[\\mathrm{HA}]_0} \\cdot 100",
         },
         {
           name: "Buffer pH after small acid added",
-          eq: "Stoich first (A⁻ + H⁺ → HA); then plug NEW moles into HH.",
+          eq: "\\text{Stoich first }(\\mathrm{A^-} + \\mathrm{H^+} \\to \\mathrm{HA})\\text{; then plug NEW moles into HH.}",
         },
       ],
     },
     {
       heading: "Equilibrium",
       items: [
-        { name: "Equilibrium constant K (in terms of concentrations)", eq: "K = Π[products]^ν / Π[reactants]^ν" },
-        { name: "Reaction quotient Q", eq: "Same form as K, but using current concentrations." },
-        { name: "Q < K → forward", eq: "Q > K → reverse; Q = K → at equilibrium" },
-        { name: "Ksp (sparingly soluble salt)", eq: "Ksp = product of ion concentrations, each raised to its stoich coefficient" },
-        { name: "Ksp ↔ molar solubility", eq: "Ca(OH)₂: Ksp = 4s³; AgCl: Ksp = s²; PbI₂: Ksp = 4s³ (same as Ca(OH)₂)" },
+        { name: "Equilibrium constant K (in terms of concentrations)", eq: "K = \\dfrac{\\prod[\\text{products}]^{\\nu}}{\\prod[\\text{reactants}]^{\\nu}}" },
+        { name: "Reaction quotient Q", eq: "\\text{Same form as }K\\text{, but using current concentrations.}" },
+        {
+          name: "Direction of shift",
+          eq: [
+            "Q < K \\;\\Rightarrow\\; \\text{forward}",
+            "Q > K \\;\\Rightarrow\\; \\text{reverse}",
+            "Q = K \\;\\Rightarrow\\; \\text{at equilibrium}",
+          ],
+        },
+        { name: "Ksp (sparingly soluble salt)", eq: "K_{\\mathrm{sp}} = \\text{product of ion concentrations, each raised to its stoich coefficient}" },
+        {
+          name: "Ksp ↔ molar solubility",
+          eq: [
+            "\\mathrm{Ca(OH)_2}: \\quad K_{\\mathrm{sp}} = 4 s^{3}",
+            "\\mathrm{AgCl}: \\quad K_{\\mathrm{sp}} = s^{2}",
+            "\\mathrm{PbI_2}: \\quad K_{\\mathrm{sp}} = 4 s^{3} \\quad (\\text{same as } \\mathrm{Ca(OH)_2})",
+          ],
+        },
       ],
     },
     {
       heading: "Thermodynamics",
       items: [
-        { name: "Free energy", eq: "ΔG° = ΔH° − TΔS°" },
-        { name: "ΔG° from K", eq: "ΔG° = −RT ln K  (R = 8.314 J/mol·K)" },
-        { name: "Van't Hoff", eq: "ln K = −ΔH°/(RT) + ΔS°/R" },
-        { name: "ΔG vs ΔG°", eq: "ΔG = ΔG° + RT ln Q (drive: ΔG < 0)" },
+        { name: "Free energy", eq: "\\Delta G^{\\circ} = \\Delta H^{\\circ} - T\\,\\Delta S^{\\circ}" },
+        { name: "ΔG° from K", eq: "\\Delta G^{\\circ} = -R T\\,\\ln K \\quad (R = 8.314\\,\\mathrm{J/(mol\\,K)})" },
+        { name: "Van't Hoff", eq: "\\ln K = -\\dfrac{\\Delta H^{\\circ}}{R T} + \\dfrac{\\Delta S^{\\circ}}{R}" },
+        { name: "ΔG vs ΔG°", eq: "\\Delta G = \\Delta G^{\\circ} + R T\\,\\ln Q \\quad (\\text{drive: } \\Delta G < 0)" },
       ],
     },
     {
       heading: "Kinetics",
       items: [
-        { name: "Generic rate law", eq: "rate = k [A]^m [B]^n" },
-        { name: "0th order integrated", eq: "[A] = [A]₀ − k t;     plot [A] vs t linear" },
-        { name: "1st order integrated", eq: "ln[A] = ln[A]₀ − k t;  plot ln[A] vs t linear" },
-        { name: "2nd order integrated", eq: "1/[A] = 1/[A]₀ + k t;  plot 1/[A] vs t linear" },
-        { name: "1st order half-life", eq: "t½ = ln 2 / k = 0.693 / k" },
-        { name: "Arrhenius", eq: "k = A · exp(−Ea/RT);  ln k₂/k₁ = (Ea/R)(1/T₁ − 1/T₂)" },
+        { name: "Generic rate law", eq: "\\text{rate} = k\\,[A]^{m}\\,[B]^{n}" },
+        {
+          name: "0th order integrated",
+          eq: [
+            "[A] = [A]_0 - k\\,t",
+            "\\text{plot } [A] \\text{ vs. } t \\text{ linear}",
+          ],
+        },
+        {
+          name: "1st order integrated",
+          eq: [
+            "\\ln[A] = \\ln[A]_0 - k\\,t",
+            "\\text{plot } \\ln[A] \\text{ vs. } t \\text{ linear}",
+          ],
+        },
+        {
+          name: "2nd order integrated",
+          eq: [
+            "\\dfrac{1}{[A]} = \\dfrac{1}{[A]_0} + k\\,t",
+            "\\text{plot } 1/[A] \\text{ vs. } t \\text{ linear}",
+          ],
+        },
+        { name: "1st order half-life", eq: "t_{1/2} = \\dfrac{\\ln 2}{k} = \\dfrac{0.693}{k}" },
+        {
+          name: "Arrhenius",
+          eq: [
+            "k = A\\,e^{-E_a/(R T)}",
+            "\\ln\\dfrac{k_2}{k_1} = \\dfrac{E_a}{R}\\left(\\dfrac{1}{T_1} - \\dfrac{1}{T_2}\\right)",
+          ],
+        },
       ],
     },
     {
       heading: "Electrochemistry",
       items: [
-        { name: "Cell potential", eq: "E°_cell = E°_cathode − E°_anode" },
-        { name: "Free energy", eq: "ΔG° = −nFE°_cell;   F = 96 485 C/mol" },
-        { name: "K from E°", eq: "ln K = nF·E°_cell / (RT)" },
-        { name: "Nernst (25 °C)", eq: "E = E° − (0.0592/n) log Q" },
-        { name: "Faraday's law", eq: "moles e⁻ = It / F;   moles M = (It)/(nF);   m = (It·M)/(nF)" },
+        { name: "Cell potential", eq: "E^{\\circ}_{\\text{cell}} = E^{\\circ}_{\\text{cathode}} - E^{\\circ}_{\\text{anode}}" },
+        {
+          name: "Free energy",
+          eq: [
+            "\\Delta G^{\\circ} = -n F E^{\\circ}_{\\text{cell}}",
+            "F = 96\\,485\\,\\mathrm{C/mol}",
+          ],
+        },
+        { name: "K from E°", eq: "\\ln K = \\dfrac{n F\\,E^{\\circ}_{\\text{cell}}}{R T}" },
+        { name: "Nernst (25 °C)", eq: "E = E^{\\circ} - \\dfrac{0.0592}{n}\\,\\log Q" },
+        {
+          name: "Faraday's law",
+          eq: [
+            "\\text{moles } e^- = \\dfrac{I\\,t}{F}",
+            "\\text{moles M} = \\dfrac{I\\,t}{n F}",
+            "m = \\dfrac{I\\,t\\,M}{n F}",
+          ],
+        },
       ],
     },
     {
       heading: "Spectroscopy & gases",
       items: [
-        { name: "Beer's Law", eq: "A = ε · b · c" },
-        { name: "Photon energy", eq: "E = hν = hc/λ;   h = 6.626×10⁻³⁴ J·s, c = 3.00×10⁸ m/s" },
-        { name: "Convenient form", eq: "E (kJ/mol) ≈ 1.196×10⁵ / λ(nm)" },
-        { name: "Ideal gas", eq: "PV = nRT;   R = 0.0821 L·atm/(mol·K) = 8.314 J/(mol·K)" },
-        { name: "Calorimetry", eq: "q = m·c·ΔT  (specific heat) or q = C·ΔT (heat capacity)" },
+        { name: "Beer's Law", eq: "A = \\varepsilon \\cdot b \\cdot c" },
+        {
+          name: "Photon energy",
+          eq: [
+            "E = h\\nu = \\dfrac{h\\,c}{\\lambda}",
+            "h = 6.626 \\times 10^{-34}\\,\\mathrm{J\\,s}",
+            "c = 3.00 \\times 10^{8}\\,\\mathrm{m/s}",
+          ],
+        },
+        { name: "Convenient form", eq: "E\\,[\\mathrm{kJ/mol}] \\approx \\dfrac{1.196 \\times 10^{5}}{\\lambda\\,[\\mathrm{nm}]}" },
+        {
+          name: "Ideal gas",
+          eq: [
+            "PV = nRT",
+            "R = 0.0821\\,\\mathrm{L\\,atm/(mol\\,K)} = 8.314\\,\\mathrm{J/(mol\\,K)}",
+          ],
+        },
+        {
+          name: "Calorimetry",
+          eq: [
+            "q = m\\,c\\,\\Delta T \\quad \\text{(specific heat)}",
+            "q = C\\,\\Delta T \\quad \\text{(heat capacity)}",
+          ],
+        },
       ],
     },
   ];
@@ -2574,7 +2653,15 @@ function FormulasPane() {
             columnAlign={["left", "left", "left"]}
             rows={g.items.map((it) => [
               <Text weight="semibold">{it.name}</Text>,
-              <Code>{it.eq}</Code>,
+              Array.isArray(it.eq) ? (
+                <Stack gap={4}>
+                  {it.eq.map((e, k) => (
+                    <Code key={k}>{e}</Code>
+                  ))}
+                </Stack>
+              ) : (
+                <Code>{it.eq}</Code>
+              ),
               it.note ?? "",
             ])}
           />
