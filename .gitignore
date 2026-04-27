@@ -1,0 +1,14 @@
+node_modules
+dist
+.DS_Store
+*.log
+.vite
+.env
+.env.local
+
+# TypeScript incremental build artifacts
+*.tsbuildinfo
+
+# Vite emits these from the .ts config when running with TS Node fallback
+vite.config.js
+vite.config.d.ts
