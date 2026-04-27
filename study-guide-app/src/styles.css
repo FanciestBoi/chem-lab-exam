@@ -1,0 +1,483 @@
+:root {
+  --bg: #0b0e14;
+  --bg-elevated: #11151d;
+  --bg-card: #141925;
+  --bg-card-2: #1a2030;
+  --fill-primary: #1f2638;
+  --fill-secondary: #181d2b;
+  --fill-tertiary: #11151d;
+
+  --text-primary: #e6ebf5;
+  --text-secondary: #a5b0c5;
+  --text-tertiary: #6c7891;
+
+  --stroke-primary: #2a3148;
+  --stroke-secondary: #232a3d;
+  --stroke-tertiary: #1c2233;
+
+  --accent-primary: #6aa8ff;
+  --accent-primary-soft: #6aa8ff22;
+
+  --tone-info: #6aa8ff;
+  --tone-info-bg: #1a2640;
+  --tone-success: #4cc38a;
+  --tone-success-bg: #14322a;
+  --tone-warning: #ffb454;
+  --tone-warning-bg: #3b2a14;
+  --tone-danger: #ff6464;
+  --tone-danger-bg: #3a1f1f;
+  --tone-neutral: #6c7891;
+  --tone-neutral-bg: #1c2233;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7f8fb;
+    --bg-elevated: #ffffff;
+    --bg-card: #ffffff;
+    --bg-card-2: #f3f5fa;
+    --fill-primary: #eef1f7;
+    --fill-secondary: #f3f5fa;
+    --fill-tertiary: #f7f8fb;
+
+    --text-primary: #0b1220;
+    --text-secondary: #475067;
+    --text-tertiary: #8390a8;
+
+    --stroke-primary: #d8dde7;
+    --stroke-secondary: #e2e6ee;
+    --stroke-tertiary: #ebeef4;
+
+    --accent-primary: #2563eb;
+    --accent-primary-soft: #2563eb22;
+
+    --tone-info: #2563eb;
+    --tone-info-bg: #e6efff;
+    --tone-success: #0f9d58;
+    --tone-success-bg: #e2f5e9;
+    --tone-warning: #c47b00;
+    --tone-warning-bg: #fff1d6;
+    --tone-danger: #c0392b;
+    --tone-danger-bg: #fde6e3;
+    --tone-neutral: #475067;
+    --tone-neutral-bg: #eef1f7;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  padding: 28px 32px 80px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (max-width: 720px) {
+  #root {
+    padding: 16px;
+  }
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: var(--accent-primary);
+}
+
+/* ---------- Headings ---------- */
+.cs-h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--text-primary);
+}
+.cs-h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* ---------- Text ---------- */
+.cs-text {
+  margin: 0;
+  color: var(--text-primary);
+}
+.cs-text-secondary {
+  color: var(--text-secondary);
+}
+.cs-text-tertiary {
+  color: var(--text-tertiary);
+}
+.cs-text-small {
+  font-size: 13px;
+}
+.cs-text-italic {
+  font-style: italic;
+}
+.cs-text-semibold {
+  font-weight: 600;
+}
+
+/* ---------- Code ---------- */
+.cs-code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--fill-tertiary);
+  border: 1px solid var(--stroke-tertiary);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+/* ---------- Layout ---------- */
+.cs-stack {
+  display: flex;
+  flex-direction: column;
+}
+.cs-row {
+  display: flex;
+  flex-direction: row;
+}
+.cs-row-wrap {
+  flex-wrap: wrap;
+}
+.cs-grid {
+  display: grid;
+}
+
+/* ---------- Card ---------- */
+.cs-card {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-primary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.cs-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card-2);
+  border-bottom: 1px solid var(--stroke-secondary);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: default;
+}
+.cs-card-header.cs-card-clickable {
+  cursor: pointer;
+  user-select: none;
+}
+.cs-card-header.cs-card-clickable:hover {
+  background: var(--fill-primary);
+}
+.cs-card-header-title {
+  flex: 1;
+  min-width: 0;
+}
+.cs-card-header-trailing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cs-card-chevron {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  transition: transform 0.15s ease;
+}
+.cs-card-chevron.open {
+  transform: rotate(90deg);
+}
+.cs-card-body {
+  padding: 14px 16px 16px;
+}
+
+/* ---------- Pill ---------- */
+.cs-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--fill-primary);
+  border: 1px solid var(--stroke-secondary);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: default;
+}
+.cs-pill.cs-pill-clickable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.cs-pill.cs-pill-clickable:hover {
+  background: var(--fill-secondary);
+  border-color: var(--stroke-primary);
+}
+.cs-pill.cs-pill-sm {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.cs-pill-info {
+  background: var(--tone-info-bg);
+  color: var(--tone-info);
+  border-color: transparent;
+}
+.cs-pill-success {
+  background: var(--tone-success-bg);
+  color: var(--tone-success);
+  border-color: transparent;
+}
+.cs-pill-warning {
+  background: var(--tone-warning-bg);
+  color: var(--tone-warning);
+  border-color: transparent;
+}
+.cs-pill-neutral {
+  background: var(--tone-neutral-bg);
+  color: var(--tone-neutral);
+  border-color: transparent;
+}
+.cs-pill-active {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -1px;
+}
+
+/* ---------- Button ---------- */
+.cs-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  background: var(--accent-primary);
+  color: white;
+  font-family: inherit;
+}
+.cs-button:hover {
+  filter: brightness(1.08);
+}
+.cs-button.variant-secondary {
+  background: var(--fill-primary);
+  color: var(--text-primary);
+  border-color: var(--stroke-primary);
+}
+.cs-button.variant-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--stroke-secondary);
+}
+.cs-button.variant-ghost:hover {
+  background: var(--fill-secondary);
+  color: var(--text-primary);
+}
+
+/* ---------- Callout ---------- */
+.cs-callout {
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  border: 1px solid;
+  background: var(--fill-secondary);
+}
+.cs-callout-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cs-callout-info {
+  background: var(--tone-info-bg);
+  border-color: var(--tone-info);
+  color: var(--text-primary);
+}
+.cs-callout-info .cs-callout-title {
+  color: var(--tone-info);
+}
+.cs-callout-success {
+  background: var(--tone-success-bg);
+  border-color: var(--tone-success);
+}
+.cs-callout-success .cs-callout-title {
+  color: var(--tone-success);
+}
+.cs-callout-warning {
+  background: var(--tone-warning-bg);
+  border-color: var(--tone-warning);
+}
+.cs-callout-warning .cs-callout-title {
+  color: var(--tone-warning);
+}
+.cs-callout-danger {
+  background: var(--tone-danger-bg);
+  border-color: var(--tone-danger);
+}
+.cs-callout-danger .cs-callout-title {
+  color: var(--tone-danger);
+}
+
+/* ---------- Stat ---------- */
+.cs-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-primary);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cs-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+.cs-stat-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cs-stat.tone-info .cs-stat-value {
+  color: var(--tone-info);
+}
+.cs-stat.tone-success .cs-stat-value {
+  color: var(--tone-success);
+}
+.cs-stat.tone-warning .cs-stat-value {
+  color: var(--tone-warning);
+}
+
+/* ---------- Divider ---------- */
+.cs-divider {
+  height: 1px;
+  background: var(--stroke-secondary);
+  border: 0;
+  margin: 0;
+}
+
+/* ---------- Table ---------- */
+.cs-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--stroke-secondary);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+}
+.cs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.cs-table th,
+.cs-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--stroke-tertiary);
+  vertical-align: top;
+  text-align: left;
+}
+.cs-table th {
+  background: var(--bg-card-2);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+.cs-table tr:last-child td {
+  border-bottom: 0;
+}
+.cs-table tr.row-warning td {
+  background: color-mix(in srgb, var(--tone-warning) 10%, transparent);
+}
+.cs-table tr.row-info td {
+  background: color-mix(in srgb, var(--tone-info) 10%, transparent);
+}
+.cs-table tr.row-success td {
+  background: color-mix(in srgb, var(--tone-success) 10%, transparent);
+}
+
+/* ---------- Math (KaTeX) ---------- */
+.cs-math-block-wrap {
+  display: block;
+  background: var(--fill-tertiary);
+  border: 1px solid var(--stroke-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  overflow-x: auto;
+}
+.cs-math-block-wrap .katex-display {
+  margin: 0;
+}
+.cs-math-block-wrap .katex {
+  font-size: 1em;
+}
+.cs-math-inline .katex {
+  font-size: 1em;
+}
+.cs-math-fallback {
+  font-family: var(--font-mono);
+  color: var(--tone-warning);
+  background: var(--fill-tertiary);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* KaTeX outputs use currentColor; this ensures math inherits text color */
+.katex {
+  color: var(--text-primary);
+}
+
+/* Tables that contain inline math should size cells comfortably */
+.cs-table td .katex {
+  font-size: 0.95em;
+}
+
+/* ---------- Mobile sidebar collapse ---------- */
+@media (max-width: 900px) {
+  .cs-grid.cs-grid-sidebar {
+    grid-template-columns: 1fr !important;
+  }
+}

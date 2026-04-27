@@ -26,11 +26,14 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: study-guide-app/package-lock.json
 
       - name: Install
+        working-directory: study-guide-app
         run: npm ci
 
       - name: Build
+        working-directory: study-guide-app
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
         run: npm run build
@@ -38,7 +41,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: study-guide-app/dist
 
   deploy:
     needs: build
