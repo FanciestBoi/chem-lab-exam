@@ -73,6 +73,9 @@ const PARA_LINE_TSX = `<Text key={i}>
 const FORMULA_EQ_CANVAS = `<Code>{it.eq}</Code>`;
 const FORMULA_EQ_TSX = `<Math>{it.eq}</Math>`;
 
+const FORMULA_EQ_ARRAY_CANVAS = `<Code key={k}>{e}</Code>`;
+const FORMULA_EQ_ARRAY_TSX = `<Math key={k}>{e}</Math>`;
+
 function rewriteImportBlock(source, { toShim }) {
   // Match the literal canvas import block (`from "cursor/canvas"`) or the
   // shim variant (`from "./canvas-shim"`) and rewrite it.
@@ -127,6 +130,9 @@ function deriveTsxFromCanvas(canvasSource) {
     throw new Error("Formulas <Code>{it.eq}</Code> snippet missing from canvas.");
   }
   out = out.replace(FORMULA_EQ_CANVAS, FORMULA_EQ_TSX);
+  if (out.includes(FORMULA_EQ_ARRAY_CANVAS)) {
+    out = out.replace(FORMULA_EQ_ARRAY_CANVAS, FORMULA_EQ_ARRAY_TSX);
+  }
   return out;
 }
 
@@ -146,6 +152,9 @@ function deriveCanvasFromTsx(tsxSource) {
     throw new Error("TSX <Math>{it.eq}</Math> snippet not found.");
   }
   out = out.replace(FORMULA_EQ_TSX, FORMULA_EQ_CANVAS);
+  if (out.includes(FORMULA_EQ_ARRAY_TSX)) {
+    out = out.replace(FORMULA_EQ_ARRAY_TSX, FORMULA_EQ_ARRAY_CANVAS);
+  }
   return out;
 }
 

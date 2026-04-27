@@ -165,6 +165,64 @@ function fixParenExpScripts(s: string): string {
     .replace(/(?<![A-Za-z\d}])_\(([^()]*)\)/g, (_, e: string) => `_{(${e})}`);
 }
 
+// Tighten scientific notation. After the Unicode passes, "1.0×10⁻³" becomes
+// "1.0\times 10^{-3}", but we want a thin space and a properly braced
+// exponent: "1.0\,\times 10^{-3}". Also catches "1.0 \times 10^-3" → braces.
+function formatScientific(s: string): string {
+  s = s.replace(/\\times\s*10\^(-?\d+)\b/g, "\\times 10^{$1}");
+  s = s.replace(/(\d)\s*\\times\s*10\^/g, "$1\\,\\times 10^");
+  return s;
+}
+
+// Insert a thin space between a numeric value and a following unit token.
+// "25 °C" → "25\,°C" (already converted to ^{\circ}C upstream, but this
+// catches plain digit+space+unit forms). Conservative: only fires when the
+// unit is one of the canonical SI/chemistry tokens.
+const UNIT_TOKENS = [
+  "M", "mol", "mmol", "kg", "mg", "g",
+  "J", "kJ", "kcal", "cal",
+  "min", "ms", "s",
+  "K", "mL", "L",
+  "nm", "pm", "cm", "mm", "km",
+  "atm", "Pa", "kPa", "torr", "bar",
+  "Hz", "kHz",
+  "C", "F", "V", "A", "T",
+];
+function valueUnitSpace(s: string): string {
+  const tokenAlt = UNIT_TOKENS.join("|");
+  const re = new RegExp(`(\\d|\\})\\s+(${tokenAlt})\\b`, "g");
+  return s.replace(re, (_m, lhs: string, unit: string) => `${lhs}\\,\\mathrm{${unit}}`);
+}
+
+// Compound units: a run of unit tokens connected by \cdot, /, or whitespace
+// where at least one token has an explicit exponent (e.g. M^{-1}\cdot s^{-1},
+// J/(mol\cdot K), L\cdot atm/(mol\cdot K)). Wrap the whole run in \mathrm{}
+// and replace \cdot with a thin space for tighter typography. Skip content
+// already inside \text{...} or \mathrm{...} groups so we don't double-wrap.
+function wrapCompoundUnits(s: string): string {
+  const stash: string[] = [];
+  s = s.replace(/\\(?:text|mathrm)\{[^{}]*\}/g, (m) => {
+    const i = stash.length;
+    stash.push(m);
+    return `\u0001${i}\u0002`;
+  });
+  const tokenAlt = UNIT_TOKENS.join("|");
+  const expPart = `(?:\\^\\{[^{}]*\\}|\\^-?\\d)?`;
+  const tokenPart = `(?:${tokenAlt})${expPart}`;
+  const sep = `(?:\\\\cdot|\\\\,|/)`;
+  const run = `${tokenPart}(?:\\s*${sep}\\s*${tokenPart}|\\s*${sep}\\s*\\(${tokenPart}(?:\\s*${sep}\\s*${tokenPart})*\\))+`;
+  const re = new RegExp(`(?<![A-Za-z\\\\{])(${run})`, "g");
+  s = s.replace(re, (m) => `\\mathrm{${m.replace(/\\cdot/g, "\\,")}}`);
+  s = s.replace(/\u0001(\d+)\u0002/g, (_, i) => stash[+i]);
+  return s;
+}
+
+// Escape stray % signs so KaTeX doesn't treat them as comment starts.
+// Skip already-escaped ones.
+function escapePercent(s: string): string {
+  return s.replace(/(?<!\\)%/g, "\\%");
+}
+
 function wrapBareChemistry(s: string): string {
   const stash: string[] = [];
   s = s.replace(/\{[^{}]*\}/g, (m) => {
@@ -227,10 +285,20 @@ export function unicodeToLatex(input: string): string {
   s = wrapMultiLetterSuperscripts(s);
   s = fixParenExpScripts(s);
   s = wrapMathFunctions(s);
+  // Tighten scientific notation: brace exponents and add thin space
+  // between value and \times.
+  s = formatScientific(s);
   s = wrapBareChemistry(s);
+  // Wrap compound unit runs (M^{-1}\cdot s^{-1}, J/(mol\cdot K)) in
+  // \mathrm{} so they render upright.
+  s = wrapCompoundUnits(s);
   s = wrapEnglishWords(s);
   s = styleChemBrackets(s);
   s = styleKVariants(s);
+  // Insert thin space between numeric value and a trailing unit token.
+  s = valueUnitSpace(s);
+  // Escape stray percent signs so KaTeX doesn't treat them as comments.
+  s = escapePercent(s);
   return s;
 }
 
