@@ -549,19 +549,40 @@ const SUPERSCRIPT_MAP: Record<string, string> = {
   "ᵛ": "v", "ʷ": "w", "ˣ": "x", "ʸ": "y", "ᶻ": "z",
 };
 
+// All multi-letter LaTeX commands have a trailing space so adjacent letters
+// don't merge into the command name (e.g. \Delta G, not \DeltaG which KaTeX
+// would render in red as an unknown command).
 const GREEK_MAP: Record<string, string> = {
-  "α": "\\alpha", "β": "\\beta", "γ": "\\gamma", "δ": "\\delta",
-  "ε": "\\varepsilon", "ζ": "\\zeta", "η": "\\eta", "θ": "\\theta",
-  "ι": "\\iota", "κ": "\\kappa", "λ": "\\lambda", "μ": "\\mu",
-  "ν": "\\nu", "ξ": "\\xi", "π": "\\pi", "ρ": "\\rho",
-  "σ": "\\sigma", "τ": "\\tau", "υ": "\\upsilon", "φ": "\\varphi",
-  "χ": "\\chi", "ψ": "\\psi", "ω": "\\omega",
-  "Α": "A", "Β": "B", "Γ": "\\Gamma", "Δ": "\\Delta",
-  "Ε": "E", "Ζ": "Z", "Η": "H", "Θ": "\\Theta",
-  "Ι": "I", "Κ": "K", "Λ": "\\Lambda", "Μ": "M",
-  "Ν": "N", "Ξ": "\\Xi", "Π": "\\Pi", "Ρ": "P",
-  "Σ": "\\Sigma", "Τ": "T", "Υ": "\\Upsilon", "Φ": "\\Phi",
-  "Χ": "X", "Ψ": "\\Psi", "Ω": "\\Omega",
+  "α": "\\alpha ", "β": "\\beta ", "γ": "\\gamma ", "δ": "\\delta ",
+  "ε": "\\varepsilon ", "ζ": "\\zeta ", "η": "\\eta ", "θ": "\\theta ",
+  "ι": "\\iota ", "κ": "\\kappa ", "λ": "\\lambda ", "μ": "\\mu ",
+  "ν": "\\nu ", "ξ": "\\xi ", "π": "\\pi ", "ρ": "\\rho ",
+  "σ": "\\sigma ", "τ": "\\tau ", "υ": "\\upsilon ", "φ": "\\varphi ",
+  "χ": "\\chi ", "ψ": "\\psi ", "ω": "\\omega ",
+  "Α": "A", "Β": "B", "Γ": "\\Gamma ", "Δ": "\\Delta ",
+  "Ε": "E", "Ζ": "Z", "Η": "H", "Θ": "\\Theta ",
+  "Ι": "I", "Κ": "K", "Λ": "\\Lambda ", "Μ": "M",
+  "Ν": "N", "Ξ": "\\Xi ", "Π": "\\Pi ", "Ρ": "P",
+  "Σ": "\\Sigma ", "Τ": "T", "Υ": "\\Upsilon ", "Φ": "\\Phi ",
+  "Χ": "X", "Ψ": "\\Psi ", "Ω": "\\Omega ",
+};
+
+const FRACTION_MAP: Record<string, string> = {
+  "½": "\\tfrac{1}{2}",
+  "¼": "\\tfrac{1}{4}",
+  "¾": "\\tfrac{3}{4}",
+  "⅓": "\\tfrac{1}{3}",
+  "⅔": "\\tfrac{2}{3}",
+  "⅕": "\\tfrac{1}{5}",
+  "⅖": "\\tfrac{2}{5}",
+  "⅗": "\\tfrac{3}{5}",
+  "⅘": "\\tfrac{4}{5}",
+  "⅙": "\\tfrac{1}{6}",
+  "⅚": "\\tfrac{5}{6}",
+  "⅛": "\\tfrac{1}{8}",
+  "⅜": "\\tfrac{3}{8}",
+  "⅝": "\\tfrac{5}{8}",
+  "⅞": "\\tfrac{7}{8}",
 };
 
 const OPERATOR_MAP: Record<string, string> = {
@@ -652,17 +673,137 @@ function styleKVariants(s: string): string {
   return s.replace(/\bK(sp|eq|a|b|w|c|p|f)\b/g, (_, sub: string) => `K_{\\mathrm{${sub}}}`);
 }
 
-// Style ΔH, ΔS, ΔG, etc. (after Greek replacement, ΔH → \Delta H — but
-// we want \Delta H° = \Delta H^\circ for thermo).
-// Already handled by GREEK_MAP and OPERATOR_MAP for °.
+// Multi-letter ASCII subscripts after `_` get wrapped in \mathrm{} so they
+// render upright like real chemistry subscripts (V_eq, M_NaOH, V_initial).
+// Single chars (V_2, V_a) are left alone — KaTeX handles those fine.
+// Chained underscores like V_acid_initial collapse into a single subscript:
+// V_{\mathrm{acid,\,initial}}, so KaTeX doesn't see invalid double-subscripts.
+function wrapMultiLetterSubscripts(s: string): string {
+  return s.replace(
+    /_([a-zA-Z][a-zA-Z0-9]+(?:_[a-zA-Z][a-zA-Z0-9]+)*)/g,
+    (_, w: string) => {
+      const inner = w.replace(/_/g, ",\\,");
+      return `_{\\mathrm{${inner}}}`;
+    }
+  );
+}
+
+// Same for `^` superscripts when followed by 2+ letters (rare but possible).
+function wrapMultiLetterSuperscripts(s: string): string {
+  return s.replace(/\^([a-zA-Z]{2,})\b/g, (_, w: string) => `^{\\mathrm{${w}}}`);
+}
+
+// Convert ^( ... ) and _( ... ) into ^{ ... } and _{ ... } so KaTeX treats
+// the parenthetical expression as a single super/subscript argument. Authors
+// in the source sometimes wrote e^(-Ea/RT) instead of e^{-Ea/RT}.
+function fixParenExpScripts(s: string): string {
+  return s
+    .replace(/\^\(([^()]*)\)/g, (_, e: string) => `^{(${e})}`)
+    .replace(/(?<![A-Za-z\d}])_\(([^()]*)\)/g, (_, e: string) => `_{(${e})}`);
+}
+
+// Bare chemistry formulas outside [] brackets — like HOAc, NaOH, HCl, MgSO4 —
+// should render upright with \mathrm{}. Heuristic: any token of 2+
+// "capital + optional lowercase + optional digits" sub-tokens (so HOAc, Na,
+// HCl, MgSO4 match; English proper nouns like Hoff/Beer/Newton don't because
+// they have only one capital).
+function wrapBareChemistry(s: string): string {
+  const stash: string[] = [];
+  s = s.replace(/\{[^{}]*\}/g, (m) => {
+    const i = stash.length;
+    stash.push(m);
+    return `\u0001${i}\u0002`;
+  });
+  s = s.replace(
+    /(?<![\\a-zA-Z])(?:[A-Z][a-z]?\d*){2,}(?![a-z])/g,
+    (m) => `\\mathrm{${m}}`
+  );
+  s = s.replace(/\u0001(\d+)\u0002/g, (_, i) => stash[+i]);
+  return s;
+}
+
+// Common math functions: ln, log, exp, sin, cos, tan, etc. should render
+// upright with proper spacing. KaTeX has \ln, \log, etc. for this.
+const MATH_FUNCS = [
+  "ln", "log", "exp", "sin", "cos", "tan", "sec", "csc", "cot",
+  "sinh", "cosh", "tanh", "arcsin", "arccos", "arctan",
+  "lim", "min", "max", "sup", "inf", "det",
+];
+function wrapMathFunctions(s: string): string {
+  for (const fn of MATH_FUNCS) {
+    // Whole-word match, not preceded by a backslash (already a command),
+    // letter, or digit, and not followed by a letter/digit.
+    const re = new RegExp(`(?<![\\\\a-zA-Z0-9])${fn}(?![a-zA-Z0-9])`, "g");
+    s = s.replace(re, `\\${fn}`);
+  }
+  return s;
+}
+
+// Wrap runs of plain English words inside math strings as \text{...} so they
+// render upright with proper inter-word spacing. We protect already-grouped
+// regions ({...}) so we don't double-wrap content already inside \mathrm or
+// \text. Heuristic for what counts as English:
+//   - 2+ word phrase, where each word is a Capital + 2+ lowercase OR 2+ lowercase
+//   - OR a single word of 3+ lowercase letters (or Capital + 2+ lowercase)
+// Apostrophe-continuations like "van't" are allowed.
+function wrapEnglishWords(s: string): string {
+  // Save existing {...} groups so the regex can't peer inside them.
+  const stash: string[] = [];
+  s = s.replace(/\{[^{}]*\}/g, (m) => {
+    const i = stash.length;
+    stash.push(m);
+    return `\u0001${i}\u0002`;
+  });
+
+  const wordTok = `[A-Za-z][a-z]+(?:'[a-z]+)?`;
+  const lowerStartTok = `[a-z]{3,}(?:'[a-z]+)?`;
+  // 2+ words separated by single spaces: requires the leader to be a
+  // valid word-start (3+ lowercase OR Cap+2+lowercase).
+  const multiWord =
+    `(?:[a-z]{2,}(?:'[a-z]+)?|[A-Z][a-z]{2,}(?:'[a-z]+)?)` +
+    `(?:[ \\t]+${wordTok})+`;
+  // Single word: stricter to avoid grabbing variables.
+  const singleWord = `(?:${lowerStartTok}|[A-Z][a-z]{3,}(?:'[a-z]+)?)`;
+  const combined = `(?:${multiWord}|${singleWord})`;
+  const re = new RegExp(`(?<![\\\\a-zA-Z])${combined}`, "g");
+
+  s = s.replace(re, (m) => `\\text{${m}}`);
+
+  // Restore stash.
+  s = s.replace(/\u0001(\d+)\u0002/g, (_, i) => stash[+i]);
+  return s;
+}
 
 export function unicodeToLatex(input: string): string {
   if (!input) return "";
   let s = input;
+  // Order matters here:
+  // 1. Convert Unicode subscript/superscript runs into _{...}/^{...}.
   s = mergeRunsToLatex(s);
+  // 2. Convert Unicode special chars (Greek + math operators + fractions).
+  s = replaceMap(s, FRACTION_MAP);
   s = replaceMap(s, GREEK_MAP);
   s = replaceMap(s, OPERATOR_MAP);
+  // 3. Wrap multi-letter ASCII subscripts in \mathrm{} so they render
+  //    upright (V_eq → V_{\mathrm{eq}}). Run BEFORE English-word wrapping
+  //    so the wrapped text is hidden inside { }.
+  s = wrapMultiLetterSubscripts(s);
+  s = wrapMultiLetterSuperscripts(s);
+  // 3b. Convert ^(expr) and _(expr) into ^{(expr)} and _{(expr)}.
+  s = fixParenExpScripts(s);
+  // 4. Recognize standalone math functions (ln, log, sin, cos…) so they're
+  //    upright. Run BEFORE English-word wrapping so we don't mistake them
+  //    for plain English.
+  s = wrapMathFunctions(s);
+  // 5. Recognize bare chemistry formulas (HOAc, NaOH, HCl, MgSO4) and wrap
+  //    them in \mathrm{}. Run BEFORE English-word wrapping for proper nouns.
+  s = wrapBareChemistry(s);
+  // 6. Wrap remaining English words in \text{} so they render uprightly
+  //    with normal inter-letter spacing instead of as italic variables.
+  s = wrapEnglishWords(s);
+  // 7. Style chemistry-style brackets [X] → [\mathrm{X}].
   s = styleChemBrackets(s);
+  // 8. Pretty up Ka, Kb, Ksp, Keq, etc.
   s = styleKVariants(s);
   return s;
 }
