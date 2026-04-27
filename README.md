@@ -1,9 +1,15 @@
 # CHEM 105B — Lab Final Study Guide (standalone web app)
 
-This is the same study guide as the Cursor canvas, but as a self-contained web
-app you can open in any browser — no Cursor required. All progress (which
-experiments you've reviewed, which solutions you've revealed) is saved in your
-browser's `localStorage`.
+**Live:** https://fanciestboi.github.io/chem-lab-exam/
+
+This is the same study guide as the original Cursor canvas, but as a
+self-contained web app you can open in any browser — no Cursor required. All
+math/formulas render with [KaTeX](https://katex.org/) for proper typeset
+equations. All progress (which experiments you've reviewed, which solutions
+you've revealed) is saved in your browser's `localStorage`.
+
+Pushing a commit to `main` automatically rebuilds and redeploys via the GitHub
+Actions workflow at `.github/workflows/deploy.yml`.
 
 ## Three ways to use it
 
