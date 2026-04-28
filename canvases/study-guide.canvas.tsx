@@ -19,6 +19,10 @@ import {
   useHostTheme,
 } from "cursor/canvas";
 import {
+  AskClaudeProvider,
+  useAskClaudeSectionLabel,
+} from "./AskClaude";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -2551,6 +2555,67 @@ function PracticeCard({
   );
 }
 
+// ---------- AskClaude context-text helpers ----------
+// Convert structured study-guide data into plain text we can ship to Claude
+// as the "context" portion of the prompt.
+
+function bulletsToText(bullets: string[]): string {
+  return bullets.map((b) => `- ${b}`).join("\n");
+}
+
+function subsectionsToText(subsections: Subsection[]): string {
+  return subsections
+    .map((s) => {
+      const parts = [`## ${s.heading}`];
+      if (s.body) parts.push(s.body);
+      if (s.bullets?.length) parts.push(bulletsToText(s.bullets));
+      if (s.equations?.length) {
+        parts.push(s.equations.map((e) => `$${e}$`).join("\n"));
+      }
+      return parts.join("\n");
+    })
+    .join("\n\n");
+}
+
+function errorsToText(errors: ErrorRow[]): string {
+  return errors
+    .map((e) => {
+      const dir =
+        e.direction === "high"
+          ? " [→ result reads HIGH]"
+          : e.direction === "low"
+          ? " [→ result reads LOW]"
+          : e.direction === "either"
+          ? " [→ either direction]"
+          : "";
+      return `- ${e.source}: ${e.effect}${dir}`;
+    })
+    .join("\n");
+}
+
+function qaToText(qa: QA[]): string {
+  return qa.map((p, i) => `Q${i + 1}. ${p.q}\nA${i + 1}. ${p.a}`).join("\n\n");
+}
+
+function practiceToText(practice: Practice[]): string {
+  return practice
+    .map((p, i) => `Problem ${i + 1}. ${p.q}\nSolution: ${p.solution}`)
+    .join("\n\n");
+}
+
+function procedureToText(
+  steps: string[],
+  whys: { step: string; why: string }[]
+): string {
+  return [
+    "### What you did",
+    bulletsToText(steps),
+    "",
+    "### Why each step matters",
+    whys.map((p) => `- ${p.step}\n  ${p.why}`).join("\n"),
+  ].join("\n");
+}
+
 function ExperimentView({
   exp,
   prev,
@@ -2573,6 +2638,9 @@ function ExperimentView({
     (acc, _p, i) => acc + (practiceDone[`${exp.id}.${i}`] ? 1 : 0),
     0
   );
+
+  useAskClaudeSectionLabel(`Experiment ${exp.num} — ${exp.title}`);
+  const expSubject = `Experiment ${exp.num} — ${exp.title}`;
   return (
     <Stack gap={16}>
       <Stack gap={6}>
@@ -2601,13 +2669,23 @@ function ExperimentView({
       {extras?.tldr && extras.tldr.length > 0 && <TldrCard items={extras.tldr} />}
 
       <Grid columns={2} gap={12}>
-        <Card collapsible defaultOpen>
+        <Card
+          collapsible
+          defaultOpen
+          askSubject={`${expSubject} — Learning objectives`}
+          askContext={bulletsToText(exp.learningObjectives)}
+        >
           <CardHeader>Learning objectives (concepts)</CardHeader>
           <CardBody>
             <Bullets items={exp.learningObjectives} />
           </CardBody>
         </Card>
-        <Card collapsible defaultOpen>
+        <Card
+          collapsible
+          defaultOpen
+          askSubject={`${expSubject} — Experimental objectives`}
+          askContext={bulletsToText(exp.experimentalObjectives)}
+        >
           <CardHeader>Experimental objectives (what you did)</CardHeader>
           <CardBody>
             <Bullets items={exp.experimentalObjectives} />
@@ -2615,7 +2693,12 @@ function ExperimentView({
         </Card>
       </Grid>
 
-      <Card collapsible defaultOpen>
+      <Card
+        collapsible
+        defaultOpen
+        askSubject={`${expSubject} — Background theory`}
+        askContext={subsectionsToText(exp.theory)}
+      >
         <CardHeader trailing={<Pill tone="info" size="sm">Theory</Pill>}>
           Background theory
         </CardHeader>
@@ -2628,7 +2711,12 @@ function ExperimentView({
         </CardBody>
       </Card>
 
-      <Card collapsible defaultOpen={false}>
+      <Card
+        collapsible
+        defaultOpen={false}
+        askSubject={`${expSubject} — Procedure`}
+        askContext={procedureToText(exp.procedure, exp.procedureWhy)}
+      >
         <CardHeader trailing={<Pill size="sm">Procedure</Pill>}>
           Procedure overview &mdash; the why behind each step
         </CardHeader>
@@ -2652,7 +2740,12 @@ function ExperimentView({
         </CardBody>
       </Card>
 
-      <Card collapsible defaultOpen={false}>
+      <Card
+        collapsible
+        defaultOpen={false}
+        askSubject={`${expSubject} — Data analysis`}
+        askContext={subsectionsToText(exp.dataAnalysis)}
+      >
         <CardHeader trailing={<Pill tone="info" size="sm">Analysis</Pill>}>
           Key data analysis
         </CardHeader>
@@ -2671,7 +2764,12 @@ function ExperimentView({
         </CardBody>
       </Card>
 
-      <Card collapsible defaultOpen={false}>
+      <Card
+        collapsible
+        defaultOpen={false}
+        askSubject={`${expSubject} — Sources of error`}
+        askContext={errorsToText(exp.errors)}
+      >
         <CardHeader trailing={<Pill tone="warning" size="sm">Errors</Pill>}>
           Common sources of error
         </CardHeader>
@@ -2703,7 +2801,12 @@ function ExperimentView({
         </CardBody>
       </Card>
 
-      <Card collapsible defaultOpen={false}>
+      <Card
+        collapsible
+        defaultOpen={false}
+        askSubject={`${expSubject} — Why does this work? Q&A`}
+        askContext={qaToText(exp.whyQA)}
+      >
         <CardHeader trailing={<Pill size="sm">Q&amp;A</Pill>}>
           &quot;Why does this work?&quot; &mdash; anticipating Skibo&apos;s style
         </CardHeader>
@@ -2721,7 +2824,12 @@ function ExperimentView({
         </CardBody>
       </Card>
 
-      <Card collapsible defaultOpen={false}>
+      <Card
+        collapsible
+        defaultOpen={false}
+        askSubject={`${expSubject} — Practice problems`}
+        askContext={practiceToText(exp.practice)}
+      >
         <CardHeader trailing={<Pill tone="success" size="sm">Practice</Pill>}>
           Practice problems
         </CardHeader>
@@ -2773,6 +2881,7 @@ function ExperimentView({
 // ------------------------------------------------------------
 
 function FormulasPane() {
+  useAskClaudeSectionLabel("Formulas reference (CHEM 105B)");
   return (
     <Stack gap={16}>
       <Stack gap={4}>
@@ -2808,6 +2917,7 @@ function FormulasPane() {
 }
 
 function TechniquesPane() {
+  useAskClaudeSectionLabel("Lab techniques cheat sheet (CHEM 105B)");
   return (
     <Stack gap={16}>
       <Stack gap={4}>
@@ -2936,6 +3046,7 @@ function TechniquesPane() {
 }
 
 function SafetyPane() {
+  useAskClaudeSectionLabel("Lab safety & general knowledge (CHEM 105B)");
   return (
     <Stack gap={14}>
       <Stack gap={4}>
@@ -2966,6 +3077,7 @@ function SafetyPane() {
 }
 
 function CramPane() {
+  useAskClaudeSectionLabel("Cram plan (CHEM 105B Lab Final)");
   return (
     <Stack gap={16}>
       <Stack gap={4}>
@@ -4125,6 +4237,7 @@ function RelatedFooter({
 // FLASHCARDS PANE
 // ============================================================
 function FlashcardsPane() {
+  useAskClaudeSectionLabel("Flashcards (CHEM 105B Lab Final review)");
   const [store, setStore] = useCanvasState<LeitnerStore>("flashcards.leitner", {});
   const [filter, setFilter] = useCanvasState<string>("flashcards.filter", "all");
   const [showBack, setShowBack] = useState(false);
@@ -4360,6 +4473,7 @@ const initialQuiz: QuizState = {
 };
 
 function QuizPane({ onNavigate }: { onNavigate: (id: string) => void }) {
+  useAskClaudeSectionLabel("Quiz mode (CHEM 105B Lab Final practice)");
   const [state, setState] = useCanvasState<QuizState>("quiz.state", initialQuiz);
   const [filter, setFilter] = useCanvasState<string>("quiz.filter", "all");
 
@@ -4579,6 +4693,7 @@ const initialMock: MockState = {
 };
 
 function MockExamPane() {
+  useAskClaudeSectionLabel("Mock exam (CHEM 105B Lab Final, 60 min)");
   const [state, setState] = useCanvasState<MockState>("mock.state", initialMock);
   const [tick, setTick] = useState(0);
 
@@ -4843,6 +4958,7 @@ function MockExamPane() {
 // CROSS-CUTTING / MNEMONICS / TRAPS / PAST QUIZZES
 // ============================================================
 function CrossCuttingPane({ onNavigate }: { onNavigate: (id: string) => void }) {
+  useAskClaudeSectionLabel("Cross-cutting concepts (CHEM 105B)");
   return (
     <Stack gap={16}>
       <Stack gap={4}>
@@ -4881,6 +4997,7 @@ function CrossCuttingPane({ onNavigate }: { onNavigate: (id: string) => void }) 
 }
 
 function MnemonicsPane() {
+  useAskClaudeSectionLabel("Mnemonics & memory hooks (CHEM 105B)");
   return (
     <Stack gap={16}>
       <Stack gap={4}>
@@ -4909,6 +5026,7 @@ function MnemonicsPane() {
 }
 
 function TrapsPane({ onNavigate }: { onNavigate: (id: string) => void }) {
+  useAskClaudeSectionLabel("Skibo traps & gotchas (CHEM 105B)");
   return (
     <Stack gap={16}>
       <Stack gap={4}>
@@ -4955,6 +5073,7 @@ function TrapsPane({ onNavigate }: { onNavigate: (id: string) => void }) {
 }
 
 function PastQuizzesPane({ onNavigate }: { onNavigate: (id: string) => void }) {
+  useAskClaudeSectionLabel("Past quizzes (CHEM 105B)");
   return (
     <Stack gap={16}>
       <Stack gap={4}>
@@ -5650,6 +5769,7 @@ export default function StudyGuide() {
   }, []);
 
   return (
+    <AskClaudeProvider>
     <Stack gap={20}>
       <Stack gap={6}>
         <Row gap={10} align="center" wrap>
@@ -5918,6 +6038,7 @@ export default function StudyGuide() {
         />
       )}
     </Stack>
+    </AskClaudeProvider>
   );
 }
 
