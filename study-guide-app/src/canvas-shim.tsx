@@ -30,6 +30,7 @@ import {
   parseMixedMath,
   type MixedTextSegment,
 } from "./latex";
+import { AskClaudeButton } from "./AskClaude";
 
 export { unicodeToLatex, parseMixedMath };
 export type { MixedTextSegment };
@@ -283,6 +284,9 @@ type CardProps = {
   collapsible?: boolean;
   defaultOpen?: boolean;
   style?: CSSProperties;
+  /** When set, the CardHeader auto-renders an "Ask Claude" button. */
+  askContext?: string;
+  askSubject?: string;
 };
 type CardHeaderProps = {
   children: ReactNode;
@@ -300,6 +304,8 @@ type CardCtx = {
   collapsible: boolean;
   open: boolean;
   setOpen: (v: boolean) => void;
+  askContext?: string;
+  askSubject?: string;
 };
 const CardContext = createContext<CardCtx | null>(null);
 
@@ -316,7 +322,14 @@ function ensurePrintListener() {
   });
 }
 
-export function Card({ children, collapsible, defaultOpen = true, style }: CardProps) {
+export function Card({
+  children,
+  collapsible,
+  defaultOpen = true,
+  style,
+  askContext,
+  askSubject,
+}: CardProps) {
   const [open, setOpen] = useState(!!defaultOpen);
   useEffect(() => {
     if (!collapsible) return;
@@ -331,6 +344,8 @@ export function Card({ children, collapsible, defaultOpen = true, style }: CardP
     collapsible: !!collapsible,
     open: collapsible ? open : true,
     setOpen,
+    askContext,
+    askSubject,
   };
   return (
     <CardContext.Provider value={ctx}>
@@ -344,6 +359,7 @@ export function Card({ children, collapsible, defaultOpen = true, style }: CardP
 export function CardHeader({ children, trailing }: CardHeaderProps) {
   const ctx = useContext(CardContext);
   const clickable = ctx?.collapsible ?? false;
+  const showAsk = !!ctx?.askContext;
   return (
     <header
       className={`cs-card-header ${clickable ? "cs-card-clickable" : ""}`}
@@ -364,6 +380,12 @@ export function CardHeader({ children, trailing }: CardHeaderProps) {
       <span className="cs-card-header-title">{children}</span>
       <span className="cs-card-header-trailing">
         {trailing}
+        {showAsk && (
+          <AskClaudeButton
+            subject={ctx?.askSubject}
+            context={ctx?.askContext}
+          />
+        )}
         {clickable && (
           <span className={`cs-card-chevron ${ctx?.open ? "open" : ""}`}>
             ▶

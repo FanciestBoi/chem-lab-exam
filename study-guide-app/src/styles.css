@@ -731,4 +731,266 @@ a {
     color: inherit;
     text-decoration: none;
   }
+  /* Hide all Ask Claude UI in print */
+  .ask-claude-fab,
+  .ask-claude-selection-btn,
+  .ask-claude-overlay,
+  .ask-claude-inline {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   Ask Claude UI
+   ============================================================ */
+
+/* Inline button — slots into CardHeader trailing area */
+.ask-claude-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--accent-primary);
+  background: var(--accent-primary-soft);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+  white-space: nowrap;
+}
+.ask-claude-inline:hover {
+  background: var(--accent-primary-soft);
+  border-color: var(--accent-primary);
+}
+.ask-claude-inline:active {
+  transform: scale(0.97);
+}
+
+/* Floating button anchored to a text selection */
+.ask-claude-selection-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: 999px;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  font-family: inherit;
+  user-select: none;
+  animation: ask-claude-pop-in 120ms ease-out;
+}
+.ask-claude-selection-btn:hover {
+  filter: brightness(1.1);
+}
+@keyframes ask-claude-pop-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Persistent floating action button */
+.ask-claude-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 8000;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: 999px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+.ask-claude-fab:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+.ask-claude-fab:active {
+  transform: translateY(0) scale(0.97);
+}
+@media (max-width: 720px) {
+  .ask-claude-fab {
+    bottom: 14px;
+    right: 14px;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+}
+
+/* Modal overlay */
+.ask-claude-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  background: rgba(5, 8, 14, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 10vh 16px 16px;
+  animation: ask-claude-fade-in 120ms ease-out;
+}
+@keyframes ask-claude-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.ask-claude-modal {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--stroke-primary);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.45),
+    0 4px 10px rgba(0, 0, 0, 0.25);
+  padding: 18px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: ask-claude-modal-in 140ms ease-out;
+}
+@keyframes ask-claude-modal-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ask-claude-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ask-claude-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ask-claude-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.ask-claude-modal-close:hover {
+  color: var(--text-primary);
+  background: var(--fill-primary);
+}
+
+.ask-claude-modal-meta-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  display: block;
+}
+
+.ask-claude-modal-subject {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  background: var(--fill-secondary);
+  border: 1px solid var(--stroke-secondary);
+  border-radius: var(--radius-sm);
+}
+.ask-claude-modal-subject .ask-claude-modal-meta-label {
+  display: inline;
+  margin-right: 4px;
+}
+
+.ask-claude-modal-context {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ask-claude-modal-context blockquote {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--fill-secondary);
+  border-left: 3px solid var(--accent-primary);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-height: 140px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.ask-claude-modal-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--fill-tertiary);
+  border: 1px solid var(--stroke-primary);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  min-height: 64px;
+  outline: none;
+  transition: border-color 0.1s ease, box-shadow 0.1s ease;
+}
+.ask-claude-modal-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-soft);
+}
+.ask-claude-modal-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.ask-claude-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.ask-claude-modal-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex: 1;
+  min-width: 0;
+}
+.ask-claude-modal-submit {
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.ask-claude-modal-submit:hover {
+  filter: brightness(1.1);
+}
+.ask-claude-modal-submit:active {
+  transform: scale(0.98);
 }
