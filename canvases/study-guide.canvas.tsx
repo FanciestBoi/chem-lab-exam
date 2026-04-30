@@ -3126,7 +3126,7 @@ function CramPane() {
 // The JS built-in Math is shadowed by the imported `Math` KaTeX
 // component for the rest of this file; alias the global so we can
 // still call Math.min/max/floor/random/etc. inside the study tools.
-const MathJS = (globalThis as { Math: { min: (...n: number[]) => number; max: (...n: number[]) => number; floor: (n: number) => number; ceil: (n: number) => number; round: (n: number) => number; abs: (n: number) => number; random: () => number; pow: (a: number, b: number) => number; log: (n: number) => number; sqrt: (n: number) => number; PI: number } }).Math;
+const MathJS = (globalThis as { Math: { min: (...n: number[]) => number; max: (...n: number[]) => number; floor: (n: number) => number; ceil: (n: number) => number; round: (n: number) => number; abs: (n: number) => number; random: () => number; pow: (a: number, b: number) => number; log: (n: number) => number; sqrt: (n: number) => number; imul: (a: number, b: number) => number; PI: number } }).Math;
 
 // ----- Types --------------------------------------------------
 type ExperimentExtras = {
@@ -3171,6 +3171,9 @@ type FlashcardEntry = {
   id: string;
   expId: string;
   expLabel: string;
+  expNum: number | null;
+  expShort: string;
+  expContext: string;
   front: string;
   back: string;
   source: "whyQA" | "errors" | "formulas";
@@ -3178,6 +3181,11 @@ type FlashcardEntry = {
 
 type LeitnerState = { box: number; due: number; lastSeen: number };
 type LeitnerStore = Record<string, LeitnerState>;
+type FlashcardSettings = {
+  shuffle: boolean;
+  shuffleSeed: number;
+  examDate: string | null; // ISO yyyy-mm-dd
+};
 
 type QuizState = {
   current: string | null;
@@ -3945,6 +3953,9 @@ const flashcardDeck: FlashcardEntry[] = (() => {
         id: `fc.${exp.id}.w${i}`,
         expId: exp.id,
         expLabel: label,
+        expNum: exp.num,
+        expShort: exp.short,
+        expContext: exp.oneLiner,
         front: qa.q,
         back: qa.a,
         source: "whyQA",
@@ -3955,6 +3966,9 @@ const flashcardDeck: FlashcardEntry[] = (() => {
         id: `fc.${exp.id}.e${i}`,
         expId: exp.id,
         expLabel: label,
+        expNum: exp.num,
+        expShort: exp.short,
+        expContext: exp.oneLiner,
         front: `Error: ${e.source}. What is the effect on the result?`,
         back: e.effect,
         source: "errors",
@@ -3968,6 +3982,9 @@ const flashcardDeck: FlashcardEntry[] = (() => {
         id: `fc.formula.${g.heading.replace(/\W+/g, "_")}.${i}`,
         expId: "ref-formulas",
         expLabel: `Formula · ${g.heading}`,
+        expNum: null,
+        expShort: g.heading,
+        expContext: `Reference formula from the ${g.heading} group — applies across multiple experiments.`,
         front: `Write the formula for: ${it.name}.`,
         back: eq + (it.note ? ` — ${it.note}` : ""),
         source: "formulas",
@@ -4123,10 +4140,76 @@ function relatedLabelFor(id: string): string {
   return id;
 }
 
-function dueAfterBox(box: number): number {
-  const days = [1, 1, 3, 7, 14, 30];
+const DEFAULT_BOX_DAYS = [1, 1, 3, 7, 14, 30];
+const CRAM_THRESHOLD_DAYS = 7;
+const MIN_CRAM_INTERVAL_MIN = 5;
+
+function parseExamDate(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  // Treat the exam as ending at end-of-day local time so "tomorrow"
+  // means "any time tomorrow" rather than midnight.
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 0, 0);
+  const t = d.getTime();
+  return isFinite(t) ? t : null;
+}
+
+function daysUntilExam(examTs: number | null, nowTs: number): number | null {
+  if (examTs == null) return null;
+  return (examTs - nowTs) / (24 * 60 * 60 * 1000);
+}
+
+function isCramActive(examTs: number | null, nowTs: number): boolean {
+  const d = daysUntilExam(examTs, nowTs);
+  return d != null && d > 0 && d < CRAM_THRESHOLD_DAYS;
+}
+
+function intervalDaysForBox(box: number, examTs: number | null, nowTs: number): number {
   const idx = MathJS.min(MathJS.max(box, 1), 5);
-  return Date.now() + days[idx] * 24 * 60 * 60 * 1000;
+  const base = DEFAULT_BOX_DAYS[idx];
+  if (!isCramActive(examTs, nowTs)) return base;
+  const dToExam = daysUntilExam(examTs, nowTs)!;
+  // Compress so box-5 interval ≈ time remaining until exam, others scale linearly.
+  // Floor at MIN_CRAM_INTERVAL_MIN to avoid 0-second loops.
+  const scaled = (base / DEFAULT_BOX_DAYS[5]) * dToExam;
+  const minDays = MIN_CRAM_INTERVAL_MIN / (24 * 60);
+  return MathJS.max(scaled, minDays);
+}
+
+function dueAfterBox(box: number, examTs: number | null = null): number {
+  const days = intervalDaysForBox(box, examTs, Date.now());
+  return Date.now() + days * 24 * 60 * 60 * 1000;
+}
+
+function formatIntervalDays(days: number): string {
+  if (days >= 1) {
+    const rounded = MathJS.round(days * 10) / 10;
+    return rounded === 1 ? "1 day" : `${rounded} days`;
+  }
+  const hours = days * 24;
+  if (hours >= 1) {
+    const rounded = MathJS.round(hours * 10) / 10;
+    return rounded === 1 ? "1 hour" : `${rounded} hours`;
+  }
+  const minutes = MathJS.max(1, MathJS.round(hours * 60));
+  return `${minutes} min`;
+}
+
+function hashString(s: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = MathJS.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+
+function shuffledOrder<T extends { id: string }>(items: T[], seed: number): T[] {
+  return items
+    .map((it, i) => ({ it, i, k: hashString(`${seed}.${it.id}`) }))
+    .sort((a, b) => (a.k - b.k) || (a.i - b.i))
+    .map((x) => x.it);
 }
 
 function pickWeighted<T extends { id: string; expId: string }>(
@@ -4240,6 +4323,10 @@ function FlashcardsPane() {
   useAskClaudeSectionLabel("Flashcards (CHEM 105B Lab Final review)");
   const [store, setStore] = useCanvasState<LeitnerStore>("flashcards.leitner", {});
   const [filter, setFilter] = useCanvasState<string>("flashcards.filter", "all");
+  const [settings, setSettings] = useCanvasState<FlashcardSettings>(
+    "flashcards.settings",
+    { shuffle: true, shuffleSeed: 1, examDate: null }
+  );
   const [showBack, setShowBack] = useState(false);
   const [pos, setPos] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -4249,6 +4336,10 @@ function FlashcardsPane() {
     return () => window.clearInterval(t);
   }, []);
 
+  const examTs = useMemo(() => parseExamDate(settings.examDate), [settings.examDate]);
+  const cramActive = useMemo(() => isCramActive(examTs, now), [examTs, now]);
+  const dToExam = useMemo(() => daysUntilExam(examTs, now), [examTs, now]);
+
   const filteredDeck = useMemo(() => {
     if (filter === "all") return flashcardDeck;
     if (filter === "whyQA" || filter === "errors" || filter === "formulas")
@@ -4256,7 +4347,7 @@ function FlashcardsPane() {
     return flashcardDeck.filter((c) => c.expId === filter);
   }, [filter]);
 
-  const dueCards = useMemo(() => {
+  const dueCardsRaw = useMemo(() => {
     return filteredDeck.filter((c) => {
       const s = store[c.id];
       if (!s) return true;
@@ -4264,11 +4355,21 @@ function FlashcardsPane() {
     });
   }, [filteredDeck, store, now]);
 
+  const dueCards = useMemo(() => {
+    if (!settings.shuffle) return dueCardsRaw;
+    return shuffledOrder(dueCardsRaw, settings.shuffleSeed);
+  }, [dueCardsRaw, settings.shuffle, settings.shuffleSeed]);
+
   const card = dueCards[pos % MathJS.max(dueCards.length, 1)];
 
   useEffect(() => {
     setShowBack(false);
   }, [card?.id]);
+
+  // Reset position when the deck identity changes (filter, shuffle, seed).
+  useEffect(() => {
+    setPos(0);
+  }, [filter, settings.shuffle, settings.shuffleSeed]);
 
   const grade = useCallback(
     (rating: 1 | 2 | 3 | 4) => {
@@ -4283,13 +4384,13 @@ function FlashcardsPane() {
         else if (rating === 4) nextBox = MathJS.min(5, oldBox + 2);
         return {
           ...prev,
-          [card.id]: { box: nextBox, due: dueAfterBox(nextBox), lastSeen: Date.now() },
+          [card.id]: { box: nextBox, due: dueAfterBox(nextBox, examTs), lastSeen: Date.now() },
         };
       });
       setPos((p) => p + 1);
       setShowBack(false);
     },
-    [card, setStore]
+    [card, setStore, examTs]
   );
 
   // hotkeys: Space/Enter flips, 1-4 grades
@@ -4346,16 +4447,71 @@ function FlashcardsPane() {
     return c;
   }, [filteredDeck, store]);
 
+  const intervalRows = useMemo(
+    () =>
+      [1, 2, 3, 4, 5].map((b) => [
+        `${b}`,
+        `${boxCounts[b] ?? 0}`,
+        formatIntervalDays(intervalDaysForBox(b, examTs, now)),
+      ]),
+    [boxCounts, examTs, now]
+  );
+
+  const sourceTone = (s: FlashcardEntry["source"]) =>
+    s === "errors" ? "warning" : s === "formulas" ? "info" : "success";
+  const sourceLabel = (s: FlashcardEntry["source"]) =>
+    s === "errors" ? "Common error" : s === "formulas" ? "Formula" : "Why-Q&A";
+
+  const cramBlurb = (() => {
+    if (!cramActive || dToExam == null) return null;
+    if (dToExam < 1) {
+      const hours = MathJS.max(0, MathJS.round(dToExam * 24 * 10) / 10);
+      return `Exam in ~${hours} h — intervals compressed so cards loop today.`;
+    }
+    const days = MathJS.round(dToExam * 10) / 10;
+    return `Exam in ~${days} day${days === 1 ? "" : "s"} — intervals compressed.`;
+  })();
+
+  const reshuffle = () =>
+    setSettings((s) => ({ ...s, shuffleSeed: (s.shuffleSeed + 1) >>> 0 || 1 }));
+
+  const markAllDueNow = () => {
+    if (!window.confirm("Mark every card in this filter as due right now?")) return;
+    const ids = new Set(filteredDeck.map((c) => c.id));
+    setStore((prev) => {
+      const next = { ...prev };
+      for (const id of Object.keys(next)) {
+        if (ids.has(id)) next[id] = { ...next[id], due: Date.now() };
+      }
+      return next;
+    });
+  };
+
   return (
     <Stack gap={16}>
       <Stack gap={4}>
         <H2>Flashcards (Leitner spaced-repetition)</H2>
         <Text tone="secondary">
-          Auto-derived from why-Q&amp;A, common errors, and formulas. 5 boxes (1/3/7/14/30 day intervals).
-          Press <Code>Space</Code> to flip; after the back is shown, press <Code>1</Code>=Again,{" "}
-          <Code>2</Code>=Hard, <Code>3</Code>=Good, <Code>4</Code>=Easy. <Code>n</Code> = next without grading.
+          Auto-derived from why-Q&amp;A, common errors, and formulas. 5 boxes
+          (default 1/3/7/14/30 day intervals; compressed when an exam date is set).
+          Press <Code>Space</Code> to flip; after the back is shown, press{" "}
+          <Code>1</Code>=Again, <Code>2</Code>=Hard, <Code>3</Code>=Good,{" "}
+          <Code>4</Code>=Easy. <Code>n</Code> = next without grading.
         </Text>
       </Stack>
+
+      {cramBlurb && (
+        <Callout tone="warning" title="Cram mode active">
+          <Stack gap={8}>
+            <Text>{cramBlurb}</Text>
+            <Row gap={6} wrap>
+              <Button variant="secondary" onClick={markAllDueNow}>
+                Make all cards in this filter due now
+              </Button>
+            </Row>
+          </Stack>
+        </Callout>
+      )}
 
       <Grid columns={4} gap={12}>
         <Stat value={`${totalDue}`} label="Due now" tone="warning" />
@@ -4367,6 +4523,77 @@ function FlashcardsPane() {
           tone="info"
         />
       </Grid>
+
+      <Card collapsible defaultOpen>
+        <CardHeader>Deck options</CardHeader>
+        <CardBody>
+          <Stack gap={12}>
+            <Stack gap={6}>
+              <Text weight="semibold">Order</Text>
+              <Row gap={6} wrap align="center">
+                <Pill
+                  active={settings.shuffle}
+                  onClick={() => setSettings((s) => ({ ...s, shuffle: true }))}
+                >
+                  Shuffle
+                </Pill>
+                <Pill
+                  active={!settings.shuffle}
+                  onClick={() => setSettings((s) => ({ ...s, shuffle: false }))}
+                >
+                  Original order
+                </Pill>
+                {settings.shuffle && (
+                  <Button variant="ghost" onClick={reshuffle}>
+                    Re-shuffle
+                  </Button>
+                )}
+              </Row>
+            </Stack>
+            <Stack gap={6}>
+              <Text weight="semibold">Exam date (cram-mode interval scaling)</Text>
+              <Row gap={6} wrap align="center">
+                <input
+                  type="date"
+                  value={settings.examDate ?? ""}
+                  onChange={(e) =>
+                    setSettings((s) => ({
+                      ...s,
+                      examDate: e.target.value ? e.target.value : null,
+                    }))
+                  }
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    border: "1px solid var(--cs-stroke-secondary, #888)",
+                    background: "transparent",
+                    color: "inherit",
+                    font: "inherit",
+                  }}
+                />
+                {settings.examDate && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setSettings((s) => ({ ...s, examDate: null }))}
+                  >
+                    Clear
+                  </Button>
+                )}
+                {dToExam != null && dToExam > 0 && !cramActive && (
+                  <Text tone="secondary" size="small">
+                    {`Exam in ${MathJS.round(dToExam)} days — using default intervals.`}
+                  </Text>
+                )}
+                {dToExam != null && dToExam <= 0 && (
+                  <Text tone="secondary" size="small">
+                    Exam date is in the past — using default intervals.
+                  </Text>
+                )}
+              </Row>
+            </Stack>
+          </Stack>
+        </CardBody>
+      </Card>
 
       <Card collapsible defaultOpen>
         <CardHeader>Filter deck</CardHeader>
@@ -4386,8 +4613,10 @@ function FlashcardsPane() {
       </Card>
 
       <Card collapsible defaultOpen>
-        <CardHeader trailing={<Pill tone="info" size="sm">{card?.expLabel ?? "—"}</Pill>}>
-          {dueCards.length > 0 ? `Card ${(pos % dueCards.length) + 1} of ${dueCards.length}` : "Done!"}
+        <CardHeader>
+          {dueCards.length > 0
+            ? `Card ${(pos % dueCards.length) + 1} of ${dueCards.length}`
+            : "Done!"}
         </CardHeader>
         <CardBody>
           {dueCards.length === 0 ? (
@@ -4397,7 +4626,23 @@ function FlashcardsPane() {
               </Text>
             </Callout>
           ) : (
-            <Stack gap={12}>
+            <Stack gap={14}>
+              <Stack gap={6}>
+                <Row gap={6} wrap align="center">
+                  <Pill tone="info">
+                    {card.expNum != null
+                      ? `Experiment ${card.expNum} · ${card.expShort}`
+                      : card.expLabel}
+                  </Pill>
+                  <Pill tone={sourceTone(card.source)} size="sm">
+                    {sourceLabel(card.source)}
+                  </Pill>
+                </Row>
+                <Text tone="secondary" size="small" italic>
+                  {card.expContext}
+                </Text>
+              </Stack>
+              <Divider />
               <Stack gap={6}>
                 <Text weight="semibold">Front</Text>
                 <Para text={card.front} />
@@ -4432,16 +4677,22 @@ function FlashcardsPane() {
       </Card>
 
       <Card collapsible defaultOpen={false}>
-        <CardHeader>Box distribution</CardHeader>
+        <CardHeader
+          trailing={
+            cramActive ? (
+              <Pill tone="warning" size="sm">Cram intervals</Pill>
+            ) : (
+              <Pill tone="neutral" size="sm">Default intervals</Pill>
+            )
+          }
+        >
+          Box distribution
+        </CardHeader>
         <CardBody>
           <Table
-            headers={["Box", "Cards", "Interval"]}
+            headers={["Box", "Cards", "Next interval"]}
             columnAlign={["center", "center", "left"]}
-            rows={[1, 2, 3, 4, 5].map((b) => [
-              `${b}`,
-              `${boxCounts[b] ?? 0}`,
-              ["new / again", "1 day", "3 days", "7 days", "14 days", "30 days"][b],
-            ])}
+            rows={intervalRows}
           />
           <Row gap={6} wrap style={{ marginTop: 10 }}>
             <Button
