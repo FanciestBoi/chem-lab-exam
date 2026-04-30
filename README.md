@@ -27,7 +27,7 @@ See `study-guide-app/README.md` for build, deploy, and mobile-access instruction
 
 In addition to the per-experiment theory / errors / Q&A / practice problems, the app has a dedicated **STUDY TOOLS** sidebar group built on retrieval-practice + spaced-repetition research:
 
-- **Flashcards (SR)** — Leitner deck (5 boxes; 1/3/7/14/30-day intervals) auto-derived from every Q&A, error row, and formula. Hotkeys: `Space`/`Enter` to flip, `1`-`4` to self-grade *Again*/*Hard*/*Good*/*Easy*.
+- **Flashcards (SR)** — Leitner deck (5 boxes; default 1/3/7/14/30-day intervals) auto-derived from every Q&A, error row, and formula. Each card shows the experiment number, short title, and a one-line summary so the prompt is never decontextualized. Order can be **shuffled** (with a re-shuffle button) or kept original. Setting an **exam date** activates **cram mode**: intervals are compressed proportionally to the time remaining (e.g. exam tomorrow ⇒ box-5 ≈ 24 h, box-1 ≈ 48 min) so the full deck loops before the test, and a one-click action marks all filtered cards due now. Hotkeys: `Space`/`Enter` to flip, `1`-`4` to self-grade *Again*/*Hard*/*Good*/*Easy*.
 - **Quiz mode** — random interleaved sampler over the full problem bank with self-grade, streak, and per-experiment accuracy heatmap.
 - **Mock exam (60 min)** — 12-13 problems sized to ~40 pts with a 60-minute countdown; solutions stay hidden until submit/expiry; score history is saved.
 - **Skibo traps** — specific "gotchas" past quizzes punish (rate-definition coefficient, buffer base amount, log decimals, charge balancing in redox, blank vs zero, TD vs TC, etc.).
